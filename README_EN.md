@@ -116,7 +116,7 @@ npm test         # Run backend tests
 | **Parallel** | Atomic concurrent spawning of multiple agents in a single message |
 | **Approval** | WebSocket round-trip -- pauses until user approves or rejects |
 | **Merge** | Collects direct upstream outputs, joins with `---` separator |
-| **Sub-workflow** | Recursively invokes another workflow with memory passback |
+| **Sub-workflow** | Select another workflow, its nodes and edges are inlined/expanded in the editor |
 | **End** | Gathers upstream output, produces final result |
 
 ---
