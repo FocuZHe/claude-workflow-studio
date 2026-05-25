@@ -2,6 +2,15 @@ node_modules/
 logs/
 *.log
 
+# Test data
+data_test_temp/
+
+# macOS
+.DS_Store
+
+# Auto backup
+.BACKUP/
+
 # API Keys and secrets
 data/api-key.json
 data/api-keys.enc.json
