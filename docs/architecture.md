@@ -24,30 +24,30 @@
 ### 整体架构图
 
 ```
-┌──────────────────────────────────────────────┐
-│              Browser (SPA)                    │
-│  Dashboard | Agents | Workflows | Terminal   │
-└─────────────────────┬────────────────────────┘
-                      │  HTTP REST + WebSocket
-┌─────────────────────┴────────────────────────┐
-│         Express + WebSocket Server            │
-│  Routes | Middleware | Auth | Rate Limit      │
-│  WorkflowService | AgentService | Memory...   │
-│  sql.js (WASM SQLite) | JSON | Workspace     │
-└─────────────────────┬────────────────────────┘
-                      │
-┌─────────────────────┴────────────────────────┐
-│           Dual-Engine Execution               │
-│                                               │
-│  ┌──────────────┐    ┌──────────────────┐    │
-│  │ Master (SDK) │───▶│ Sub Agent (CLI)  │    │
-│  │ tool_use     │    │ claude --print   │    │
-│  │ Agent tools  │    │ Full toolset     │    │
-│  │ Orchestrate  │    │ Process isolate  │    │
-│  └──────────────┘    └──────────────────┘    │
-│                                               │
-│  Fallback: CLI unavailable -> SDK mode        │
-└──────────────────────────────────────────────┘
++------------------------------------------+
+|              Browser (SPA)                |
+|  Dashboard | Agents | Workflows | Terminal|
++---------------------+--------------------+
+                      |  HTTP + WebSocket
++---------------------+--------------------+
+|         Express + WebSocket Server        |
+|  Routes | Middleware | Auth | Rate Limit  |
+|  WorkflowService | AgentService | Memory  |
+|  sql.js (WASM SQLite) | JSON | Workspace |
++---------------------+--------------------+
+                      |
++---------------------+--------------------+
+|           Dual-Engine Execution           |
+|                                           |
+|  +--------------+    +----------------+  |
+|  | Master (SDK) |-->| Sub Agent (CLI)|  |
+|  | tool_use     |   | claude --print |  |
+|  | Agent tools  |   | Full toolset   |  |
+|  | Orchestrate  |   | Process isolate|  |
+|  +--------------+    +----------------+  |
+|                                           |
+|  Fallback: CLI unavailable -> SDK mode    |
++------------------------------------------+
 ```
 
 ### 数据流方向

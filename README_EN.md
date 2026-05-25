@@ -11,33 +11,33 @@ A web-based visual platform for orchestrating, monitoring, and managing multiple
 ## Architecture Overview
 
 ```
-┌──────────────────────────────────────────────┐
-│              Browser (SPA)                    │
-│  HTML + CSS + Vanilla JS + xterm.js          │
-└─────────────────────┬────────────────────────┘
-                      │  HTTP REST + WebSocket
-┌─────────────────────┴────────────────────────┐
-│         Express + WebSocket Server            │
-│  Auth | Rate Limit | Routes | Middleware      │
-└─────────────────────┬────────────────────────┘
-                      │
-┌─────────────────────┴────────────────────────┐
-│           Dual-Engine Execution               │
-│                                               │
-│  ┌──────────────┐    ┌──────────────────┐    │
-│  │ Master (SDK) │───▶│ Sub Agent (CLI)  │    │
-│  │ tool_use     │    │ claude --print   │    │
-│  │ Agent tools  │    │ Full toolset     │    │
-│  │ Orchestrate  │    │ Process isolate  │    │
-│  └──────────────┘    └──────────────────┘    │
-│                                               │
-│  Fallback: CLI unavailable -> SDK mode        │
-└─────────────────────┬────────────────────────┘
-                      │
-┌─────────────────────┴────────────────────────┐
-│              Data Layer                       │
-│  sql.js (WASM SQLite) | JSON | Workspace     │
-└──────────────────────────────────────────────┘
++------------------------------------------+
+|              Browser (SPA)                |
+|  HTML + CSS + Vanilla JS + xterm.js      |
++---------------------+--------------------+
+                      |  HTTP + WebSocket
++---------------------+--------------------+
+|         Express + WebSocket Server        |
+|  Auth | Rate Limit | Routes | Middleware  |
++---------------------+--------------------+
+                      |
++---------------------+--------------------+
+|           Dual-Engine Execution           |
+|                                           |
+|  +--------------+    +----------------+  |
+|  | Master (SDK) |-->| Sub Agent (CLI)|  |
+|  | tool_use     |   | claude --print |  |
+|  | Agent tools  |   | Full toolset   |  |
+|  | Orchestrate  |   | Process isolate|  |
+|  +--------------+    +----------------+  |
+|                                           |
+|  Fallback: CLI unavailable -> SDK mode    |
++---------------------+--------------------+
+                      |
++---------------------+--------------------+
+|              Data Layer                   |
+|  sql.js (WASM SQLite) | JSON | Workspace |
++------------------------------------------+
 ```
 
 ### Dual-Engine Execution Model
