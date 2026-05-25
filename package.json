@@ -1,0 +1,43 @@
+{
+  "name": "claude-agent-studio",
+  "version": "1.0.0",
+  "description": "Claude Agent Studio - Multi-Agent Orchestration Platform",
+  "main": "src/server/app.js",
+  "bin": {
+    "multi-agent-platform": "./bin/cli.js"
+  },
+  "scripts": {
+    "start": "node bin/cli.js",
+    "dev": "node --watch-path=src --watch-path=tests bin/cli.js",
+    "test": "node --require ./tests/setup.js --test tests/server/*.test.js",
+    "test:verbose": "node --require ./tests/setup.js --test --test-reporter=spec tests/server/*.test.js",
+    "test:integration": "node --require ./tests/setup.js --test --test-timeout=30000 tests/server/integration.test.js",
+    "test:frontend": "jest --config jest.frontend.config.js"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.98.0",
+    "@xterm/addon-fit": "^0.11.0",
+    "@xterm/xterm": "^6.0.0",
+    "archiver": "^6.0.2",
+    "cors": "^2.8.5",
+    "express": "^4.21.0",
+    "morgan": "^1.10.0",
+    "node-pty": "^1.1.0",
+    "pm2": "^5.4.0",
+    "sql.js": "^1.14.1",
+    "unzipper": "^0.12.3",
+    "uuid": "^10.0.0",
+    "ws": "^8.18.0"
+  },
+  "keywords": [
+    "multi-agent",
+    "collaboration",
+    "management"
+  ],
+  "license": "MIT",
+  "devDependencies": {
+    "@jest/globals": "^30.4.1",
+    "jest": "^30.4.2",
+    "jest-environment-jsdom": "^30.4.1"
+  }
+}

@@ -1,0 +1,156 @@
+/* ═══════════════════════════════════════════════
+   Multi-Agent Platform — Design Tokens
+   Aesthetic: Command Center / Mission Control
+   ═══════════════════════════════════════════════ */
+
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700&family=DM+Sans:wght@300;400;500;600;700&display=swap');
+
+:root {
+  /* ── Color Palette (Dark - Deep Blue) ── */
+  --bg-deep:        #060f1f;
+  --bg-primary:     #0a1628;
+  --bg-secondary:   #111d32;
+  --bg-tertiary:    #162038;
+  --bg-elevated:    #1b2744;
+  --bg-hover:       #213054;
+  --bg-active:      #283a64;
+
+  --border-subtle:  #1a2a4a;
+  --border-default: #243660;
+  --border-bright:  #2e4478;
+  --border-glow:    rgba(0, 210, 255, 0.25);
+
+  --text-primary:   #e0e8f5;
+  --text-secondary: #a0b4d0;
+  --text-tertiary:  #7a90ad;
+  --text-muted:     #5a7090;
+
+  --accent-cyan:    #00d2ff;
+  --accent-cyan-dim:#0098b8;
+  --accent-amber:   #ffb020;
+  --accent-amber-dim:#b87a10;
+  --accent-green:   #00e676;
+  --accent-green-dim:#00a854;
+  --accent-red:     #ff3d5a;
+  --accent-red-dim: #b82d40;
+  --accent-purple:  #a855f7;
+  --accent-purple-dim:#7c3aed;
+  --accent-pink:    #ec4899;
+  --accent-pink-dim:#be185d;
+
+  --accent-blue:    #00d2ff;
+
+  --accent-cyan-bg:       rgba(0, 210, 255, 0.08);
+  --accent-cyan-bg-strong:rgba(0, 210, 255, 0.15);
+  --accent-cyan-border:   rgba(0, 210, 255, 0.15);
+
+  --border-hover:   #2e4478;
+  --bg-subtle:      #0d1a30;
+
+  --glow-cyan:      0 0 20px rgba(0, 210, 255, 0.15), 0 0 40px rgba(0, 210, 255, 0.05);
+  --glow-cyan-strong: 0 0 10px rgba(0, 210, 255, 0.3), 0 0 30px rgba(0, 210, 255, 0.15), 0 0 60px rgba(0, 210, 255, 0.05);
+  --glow-amber:     0 0 20px rgba(255, 176, 32, 0.15);
+  --glow-green:     0 0 20px rgba(0, 230, 118, 0.15);
+  --glow-red:       0 0 20px rgba(255, 61, 90, 0.15);
+
+  /* ── Typography ── */
+  --font-mono:      'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace;
+  --font-sans:      'DM Sans', 'Segoe UI', system-ui, sans-serif;
+
+  --text-xs:   0.7rem;
+  --text-sm:   0.8rem;
+  --text-base: 0.9rem;
+  --text-md:   1rem;
+  --text-lg:   1.15rem;
+  --text-xl:   1.4rem;
+  --text-2xl:  1.8rem;
+  --text-3xl:  2.4rem;
+
+  /* ── Spacing ── */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+  --space-12: 48px;
+
+  /* ── Layout ── */
+  --sidebar-width: clamp(160px, 14vw, 220px);
+  --sidebar-width-collapsed: 56px;
+  --navbar-height: 56px;
+  --border-radius-sm: 4px;
+  --border-radius: 8px;
+  --border-radius-lg: 12px;
+  --border-radius-xl: 16px;
+
+  /* ── Shadows ── */
+  --shadow-sm:  0 1px 3px rgba(0,0,0,0.4);
+  --shadow-md:  0 4px 12px rgba(0,0,0,0.5);
+  --shadow-lg:  0 8px 30px rgba(0,0,0,0.6);
+  --shadow-xl:  0 16px 50px rgba(0,0,0,0.7);
+
+  /* ── Transitions ── */
+  --ease-out:   cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in:    cubic-bezier(0.7, 0, 0.84, 0);
+  --ease-bounce: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --duration-fast: 150ms;
+  --duration: 250ms;
+  --duration-slow: 400ms;
+}
+
+/* ── Light Theme (White / Clean) ── */
+[data-theme="light"] {
+  --bg-deep:        #f5f5f5;
+  --bg-primary:     #ffffff;
+  --bg-secondary:   #fafafa;
+  --bg-tertiary:    #f0f0f0;
+  --bg-elevated:    #ffffff;
+  --bg-hover:       #e8e8e8;
+  --bg-active:      #dcdcdc;
+
+  --border-subtle:  #d0d0d0;
+  --border-default: #b8b8b8;
+  --border-bright:  #a0a0a0;
+  --border-glow:    rgba(37, 99, 235, 0.2);
+
+  --text-primary:   #1a1a1a;
+  --text-secondary: #555555;
+  --text-tertiary:  #777777;
+  --text-muted:     #999999;
+
+  --accent-blue:    #2563eb;
+  --accent-cyan:    #2563eb;
+  --accent-cyan-dim:#1d4ed8;
+  --accent-amber:   #d97706;
+  --accent-amber-dim:#b45309;
+  --accent-green:   #16a34a;
+  --accent-green-dim:#15803d;
+  --accent-red:     #dc2626;
+  --accent-red-dim: #b91c1c;
+  --accent-purple:  #7c3aed;
+  --accent-purple-dim:#6d28d9;
+  --accent-pink:    #db2777;
+  --accent-pink-dim:#be185d;
+
+  --accent-cyan-bg:       rgba(37, 99, 235, 0.06);
+  --accent-cyan-bg-strong:rgba(37, 99, 235, 0.12);
+  --accent-cyan-border:   rgba(37, 99, 235, 0.15);
+
+  --border-hover:   #a0a0a0;
+  --bg-subtle:      #f0f0f0;
+
+  --glow-cyan:      0 0 20px rgba(37, 99, 235, 0.1);
+  --glow-cyan-strong: 0 0 10px rgba(37, 99, 235, 0.2), 0 0 30px rgba(37, 99, 235, 0.1);
+  --glow-amber:     0 0 20px rgba(217, 119, 6, 0.1);
+  --glow-green:     0 0 20px rgba(22, 163, 74, 0.1);
+  --glow-red:       0 0 20px rgba(220, 38, 38, 0.1);
+
+  --shadow-sm:  0 1px 3px rgba(0, 0, 0, 0.1);
+  --shadow-md:  0 4px 12px rgba(0, 0, 0, 0.12);
+  --shadow-lg:  0 8px 30px rgba(0, 0, 0, 0.15);
+  --shadow-xl:  0 16px 50px rgba(0, 0, 0, 0.18);
+}
+

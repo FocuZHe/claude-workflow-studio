@@ -1,0 +1,111 @@
+const express = require('express');
+const router = express.Router();
+const MemoryService = require('../services/MemoryService');
+const { AppError } = require('../middleware/errorHandler');
+
+router.get('/list', (req, res, next) => {
+  try {
+    const { page, limit } = req.query;
+    const memories = MemoryService.listMemories();
+
+    // Enrich with workflow name and workspace info
+    const WorkflowModel = require('../models/Workflow');
+    const WorkspaceManager = require('../services/WorkspaceManager');
+    const enriched = memories.map(m => {
+      const wf = WorkflowModel.findById(m.workflowId);
+      const wsId = wf?.workspaceId || null;
+      let workspaceName = null;
+      if (wsId) {
+        const ws = WorkspaceManager.getById(wsId);
+        workspaceName = ws?.name || null;
+      }
+      return {
+        ...m,
+        workflowName: wf?.name || m.workflowId.substring(0, 8) + '...',
+        workspaceId: wsId,
+        workspaceName
+      };
+    });
+
+    const p = parseInt(page) || 1;
+    const l = Math.min(parseInt(limit) || 20, 100);
+    const start = (p - 1) * l;
+    const items = enriched.slice(start, start + l);
+    res.json({ success: true, data: { items, total: enriched.length, page: p, limit: l } });
+  } catch (err) { next(err); }
+});
+
+// Search memories by content
+router.get('/search', (req, res, next) => {
+  try {
+    const { q } = req.query;
+    if (!q) {
+      return res.json({ success: true, data: [] });
+    }
+
+    const memories = MemoryService.listMemories();
+    const WorkflowModel = require('../models/Workflow');
+    const WorkspaceManager = require('../services/WorkspaceManager');
+    const results = [];
+
+    for (const m of memories) {
+      const content = MemoryService.getMemory(m.workflowId);
+      if (content && content.toLowerCase().includes(q.toLowerCase())) {
+        const wf = WorkflowModel.findById(m.workflowId);
+        const wsId = wf?.workspaceId || null;
+        let workspaceName = null;
+        if (wsId) {
+          const ws = WorkspaceManager.getById(wsId);
+          workspaceName = ws?.name || null;
+        }
+        results.push({
+          ...m,
+          workflowName: wf?.name || m.workflowId.substring(0, 8) + '...',
+          workspaceId: wsId,
+          workspaceName,
+          preview: content.substring(0, 200)
+        });
+      }
+    }
+
+    res.json({ success: true, data: results });
+  } catch (err) { next(err); }
+});
+
+router.get('/shared/pool', (req, res, next) => {
+  try {
+    res.json({ success: true, data: MemoryService.getSharedPool() });
+  } catch (err) { next(err); }
+});
+
+router.put('/shared/pool', (req, res, next) => {
+  try {
+    MemoryService.updateSharedPool(req.body);
+    res.json({ success: true, data: MemoryService.getSharedPool() });
+  } catch (err) { next(err); }
+});
+
+router.get('/:workflowId', (req, res, next) => {
+  try {
+    const content = MemoryService.getMemory(req.params.workflowId);
+    res.json({ success: true, data: { content } });
+  } catch (err) { next(err); }
+});
+
+router.put('/:workflowId', (req, res, next) => {
+  try {
+    const { content } = req.body;
+    if (typeof content !== 'string') throw new AppError('VALIDATION_ERROR', 'content must be a string', 400);
+    MemoryService.updateMemory(req.params.workflowId, content);
+    res.json({ success: true, data: { updated: true } });
+  } catch (err) { next(err); }
+});
+
+router.delete('/:workflowId', (req, res, next) => {
+  try {
+    MemoryService.deleteMemory(req.params.workflowId);
+    res.json({ success: true, data: { removed: true } });
+  } catch (err) { next(err); }
+});
+
+module.exports = router;
