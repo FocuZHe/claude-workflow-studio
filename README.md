@@ -68,6 +68,49 @@ Express + WebSocket 服务层
 
 ---
 
+## 快速开始
+
+### 环境要求
+
+- Node.js 18+
+- Claude Code CLI（`npm install -g @anthropic-ai/claude-code`）
+
+### 安装
+
+**方式一：ZIP 分发（推荐）**
+
+解压 ZIP → 双击 `install.bat` → 自动完成依赖安装和初始化
+
+**方式二：命令行**
+
+```bash
+npm install
+```
+
+### 启动
+
+```bash
+npm start
+```
+
+> 方式二：双击 `start.bat`（Windows）
+
+访问 http://localhost:3000
+
+### 停止
+
+```bash
+Ctrl+C
+```
+
+> 方式二：双击 `stop.bat`（Windows）
+
+### 开机自启（Windows）
+
+双击 `add-to-startup.bat` 添加自启，双击 `remove-from-startup.bat` 取消自启。
+
+---
+
 ## 快速上手
 
 ### 场景 1：让一个 AI 帮你写代码
@@ -152,49 +195,6 @@ Express + WebSocket 服务层
 | 图标 | SVG sprite（`icons.svg`，40+ 图标） |
 | 设计系统 | CSS 变量 + DM Sans / JetBrains Mono |
 | 测试 | Jest |
-
----
-
-## 快速开始
-
-### 环境要求
-
-- Node.js 18+
-- Claude Code CLI（`npm install -g @anthropic-ai/claude-code`）
-
-### 安装
-
-**方式一：ZIP 分发（推荐）**
-
-解压 ZIP → 双击 `install.bat` → 自动完成依赖安装和初始化
-
-**方式二：命令行**
-
-```bash
-npm install
-```
-
-### 启动
-
-```bash
-npm start
-```
-
-> 方式二：双击 `start.bat`（Windows）
-
-访问 http://localhost:3000
-
-### 停止
-
-```bash
-Ctrl+C
-```
-
-> 方式二：双击 `stop.bat`（Windows）
-
-### 开机自启（Windows）
-
-双击 `add-to-startup.bat` 添加自启，双击 `remove-from-startup.bat` 取消自启。
 
 ---
 
