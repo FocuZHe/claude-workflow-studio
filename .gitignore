@@ -1,0 +1,35 @@
+node_modules/
+logs/
+*.log
+
+# API Keys and secrets
+data/api-key.json
+data/api-keys.enc.json
+data/.keyfile
+.env
+
+# Runtime state
+data/current-workspace.json
+data/chat-workspace/
+data/skills/
+data/mcp/
+data/*.sqlite
+data/*.sqlite.bak
+data/*.bak
+data/*.migrated
+
+# Workspace user data
+workspace/
+.agents/
+.claude/
+skills/
+技能/
+skills-lock.json
+MCP/
+
+# Test temp data
+tests/.temp-data/
+
+# Generated files
+_zip-staging/
+*.zip
