@@ -7,12 +7,16 @@
 一个基于 Web 的可视化平台，用于编排、监控和管理多个 Claude Code Agent 协作完成复杂任务。支持拖拽式工作流、实时流式输出、断点续传、记忆传递和技能市场。
 
 <p align="center">
-  <img src="screenshots/控制台.png" alt="控制面板" width="45%">
-  <img src="screenshots/工作流.png" alt="工作流编辑器" width="45%">
+  <img src="screenshots/控制台.png" alt="控制面板" width="80%">
 </p>
 <p align="center">
-  <img src="screenshots/市场.png" alt="技能市场" width="45%">
-  <img src="screenshots/文件.png" alt="文件管理" width="45%">
+  <img src="screenshots/工作流.png" alt="工作流编辑器" width="80%">
+</p>
+<p align="center">
+  <img src="screenshots/市场.png" alt="技能市场" width="80%">
+</p>
+<p align="center">
+  <img src="screenshots/文件.png" alt="文件管理" width="80%">
 </p>
 
 ---
@@ -20,32 +24,27 @@
 ## 架构概览
 
 ```
-+------------------------------------------+
-|              Browser (SPA)                |
-|  HTML + CSS + Vanilla JS + xterm.js      |
-+---------------------+--------------------+
-                      |  HTTP + WebSocket
-+---------------------+--------------------+
-|           Express + WebSocket             |
-|  鉴权 | 限流 | 路由 | 服务 | 中间件    |
-+---------------------+--------------------+
-                      |
-+---------------------+--------------------+
-|               双引擎执行                  |
-|                                           |
-|  +--------------+    +----------------+  |
-|  | 主 Agent     |-->| 子 Agent       |  |
-|  | (SDK)        |   | (CLI)          |  |
-|  | tool_use     |   | claude --print |  |
-|  +--------------+    +----------------+  |
-|                                           |
-|  CLI 不可用时自动回退 SDK 模式            |
-+---------------------+--------------------+
-                      |
-+---------------------+--------------------+
-|               数据层                      |
-|  sql.js | JSON | 工作区文件              |
-+------------------------------------------+
+Browser (SPA)
+  HTML + CSS + Vanilla JS + xterm.js
+      │  HTTP REST + WebSocket
+      ▼
+Express + WebSocket Server
+  Auth │ Rate Limit │ Routes │ Middleware
+      │
+      ▼
+Dual-Engine Execution
+
+  ┌─ Master Agent (SDK) ──→ Sub Agent (CLI)
+  │  tool_use loop          claude --print
+  │  Agent tools            Full toolset
+  │  Orchestrate            Process isolation
+  │
+  └─ Fallback: CLI unavailable → SDK mode
+
+      │
+      ▼
+Data Layer
+  sql.js (WASM SQLite) │ JSON │ Workspace Files
 ```
 
 ### 双引擎执行模型
