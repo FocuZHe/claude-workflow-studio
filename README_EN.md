@@ -6,6 +6,15 @@ English | [中文](README.md)
 
 A web-based visual platform for orchestrating, monitoring, and managing multiple Claude Code Agents to collaborate on complex tasks. Features drag-and-drop workflow editor, real-time streaming output, checkpoint/resume, memory transfer, and a skills marketplace.
 
+<p align="center">
+  <img src="screenshots/控制台.png" alt="Dashboard" width="45%">
+  <img src="screenshots/工作流.png" alt="Workflow Editor" width="45%">
+</p>
+<p align="center">
+  <img src="screenshots/市场.png" alt="Skills Marketplace" width="45%">
+  <img src="screenshots/文件.png" alt="File Manager" width="45%">
+</p>
+
 ---
 
 ## Architecture Overview

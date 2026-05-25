@@ -6,6 +6,15 @@
 
 一个基于 Web 的可视化平台，用于编排、监控和管理多个 Claude Code Agent 协作完成复杂任务。支持拖拽式工作流、实时流式输出、断点续传、记忆传递和技能市场。
 
+<p align="center">
+  <img src="screenshots/控制台.png" alt="控制面板" width="45%">
+  <img src="screenshots/工作流.png" alt="工作流编辑器" width="45%">
+</p>
+<p align="center">
+  <img src="screenshots/市场.png" alt="技能市场" width="45%">
+  <img src="screenshots/文件.png" alt="文件管理" width="45%">
+</p>
+
 ---
 
 ## 架构概览
