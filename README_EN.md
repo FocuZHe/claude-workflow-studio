@@ -1,6 +1,6 @@
 English | [中文](README.md)
 
-> ⚠️ **Status: Experimental Preview** — This project is under active development. Features may be incomplete and undiscovered bugs may exist. **Not thoroughly tested in production environments — use at your own risk.** Feel free to fork and modify. Maintenance time is limited; issues and PRs may not be addressed promptly.
+> ⚠️ **Status: Experimental Preview** — This project is developed by a first-year college student with limited knowledge. Features may have many imperfections and undiscovered bugs may exist. **Not thoroughly tested in production environments — do not use for modifying important files.** Feel free to fork and modify. Maintenance time is limited; issues and PRs may not be addressed promptly.
 
 # Claude Agent Studio
 
