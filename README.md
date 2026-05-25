@@ -7,16 +7,12 @@
 一个基于 Web 的可视化平台，用于编排、监控和管理多个 Claude Code Agent 协作完成复杂任务。支持拖拽式工作流、实时流式输出、断点续传、记忆传递和技能市场。
 
 <p align="center">
-  <img src="screenshots/控制台.png" alt="控制面板" width="80%">
+  <img src="screenshots/控制台.png" alt="控制面板" width="45%">
+  <img src="screenshots/工作流.png" alt="工作流编辑器" width="45%">
 </p>
 <p align="center">
-  <img src="screenshots/工作流.png" alt="工作流编辑器" width="80%">
-</p>
-<p align="center">
-  <img src="screenshots/市场.png" alt="技能市场" width="80%">
-</p>
-<p align="center">
-  <img src="screenshots/文件.png" alt="文件管理" width="80%">
+  <img src="screenshots/市场.png" alt="技能市场" width="45%">
+  <img src="screenshots/文件.png" alt="文件管理" width="45%">
 </p>
 
 ---
@@ -26,25 +22,25 @@
 ```
 Browser (SPA)
   HTML + CSS + Vanilla JS + xterm.js
-      │  HTTP REST + WebSocket
+      │  HTTP + WebSocket
       ▼
-Express + WebSocket Server
-  Auth │ Rate Limit │ Routes │ Middleware
+Express + WebSocket 服务层
+  鉴权 │ 限流 │ 路由 │ 服务 │ 中间件
       │
       ▼
-Dual-Engine Execution
+双引擎执行层
 
-  ┌─ Master Agent (SDK) ──→ Sub Agent (CLI)
-  │  tool_use loop          claude --print
-  │  Agent tools            Full toolset
-  │  Orchestrate            Process isolation
+  ┌─ 主 Agent (SDK) ──→ 子 Agent (CLI)
+  │  tool_use 循环        claude --print
+  │  命名 Agent 工具      完整工具集
+  │  编排调度             进程隔离
   │
-  └─ Fallback: CLI unavailable → SDK mode
+  └─ CLI 不可用时自动回退 SDK 模式
 
       │
       ▼
-Data Layer
-  sql.js (WASM SQLite) │ JSON │ Workspace Files
+数据层
+  sql.js │ JSON │ 工作区文件
 ```
 
 ### 双引擎执行模型
