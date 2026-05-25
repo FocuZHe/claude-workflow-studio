@@ -7,16 +7,12 @@ English | [中文](README.md)
 A web-based visual platform for orchestrating, monitoring, and managing multiple Claude Code Agents to collaborate on complex tasks. Features drag-and-drop workflow editor, real-time streaming output, checkpoint/resume, memory transfer, and a skills marketplace.
 
 <p align="center">
-  <img src="screenshots/控制台.png" alt="Dashboard" width="80%">
+  <img src="screenshots/控制台.png" alt="Dashboard" width="45%">
+  <img src="screenshots/工作流.png" alt="Workflow Editor" width="45%">
 </p>
 <p align="center">
-  <img src="screenshots/工作流.png" alt="Workflow Editor" width="80%">
-</p>
-<p align="center">
-  <img src="screenshots/市场.png" alt="Skills Marketplace" width="80%">
-</p>
-<p align="center">
-  <img src="screenshots/文件.png" alt="File Manager" width="80%">
+  <img src="screenshots/市场.png" alt="Skills Marketplace" width="45%">
+  <img src="screenshots/文件.png" alt="File Manager" width="45%">
 </p>
 
 ---
@@ -94,7 +90,7 @@ npm test         # Run backend tests
 
 ### Features
 
-- **Workflow templates (15+)**: Pre-built templates with preset skills for common scenarios
+- **Workflow templates (19)**: Pre-built templates with preset skills for common scenarios
 - **AI workflow generation**: Describe in natural language, AI generates the complete workflow DAG
 - **Skills marketplace**: 249 real skills from anthropics/skills and affaan-m/ECC, organized in 19 categories
 - **Multi-config API Key management**: AES-256-GCM encrypted, manage multiple keys in Settings
@@ -165,7 +161,7 @@ workspace/<wsId>/
 │   ├── skills.json
 │   ├── mcp-tools.json
 │   ├── execution-log.json
-│   ├── checkpoints/          # Per-step checkpoint files
+│   ├── .checkpoint/          # Per-step checkpoint files
 │   └── snapshots/            # Workflow state snapshots
 ├── reports/                  # Execution reports
 ├── .context/                 # Workflow memory
