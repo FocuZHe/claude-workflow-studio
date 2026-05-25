@@ -4,44 +4,40 @@ English | [中文](README.md)
 
 # Claude Agent Studio
 
-A web-based visual management platform for creating, orchestrating, and controlling multiple Claude Code Agents, chaining them through workflows to complete complex tasks.
-
-Think of it as a **web-based AI factory control center**. Agents are workers, workflows are assembly lines, and you are the factory manager. Create multiple AI assistants, each configured with different models and capabilities, chain them into pipelines where one hands off to the next, and watch in real-time as each AI thinks and produces output.
+A web-based visual platform for orchestrating, monitoring, and managing multiple Claude Code Agents to collaborate on complex tasks. Features drag-and-drop workflow editor, real-time streaming output, checkpoint/resume, memory transfer, and a skills marketplace.
 
 ---
 
 ## Architecture Overview
 
 ```
-┌──────────────────────────────────────────────────────────┐
-│                    Browser (SPA)                          │
-│  HTML + CSS + Vanilla JS + xterm.js + SVG Icons          │
-└────────────────────┬─────────────────────────────────────┘
-                     │  HTTP REST + WebSocket
-┌────────────────────┴─────────────────────────────────────┐
-│              Express + WebSocket Server                   │
-│  Auth │ Rate Limit │ Routes │ Services │ Middleware       │
-└────────────────────┬─────────────────────────────────────┘
-                     │
-┌────────────────────┴─────────────────────────────────────┐
-│               Dual-Engine Execution Layer                  │
-│                                                            │
-│  ┌───────────────────┐    ┌──────────────────────────┐   │
-│  │ Master Agent (SDK)│    │ Sub Agents (CLI)         │   │
-│  │                   │    │                          │   │
-│  │ Anthropic SDK     │───▶│ claude --print (spawn)   │   │
-│  │ tool_use loop     │    │ Full toolset             │   │
-│  │ Named Agent tools │    │ Isolated context window  │   │
-│  │ (Agent_n2, ...)   │    │ Process isolation        │   │
-│  └───────────────────┘    └──────────────────────────┘   │
-│                                                            │
-│  Fallback: CLI unavailable → sub-agents use SDK mode      │
-└────────────────────┬─────────────────────────────────────┘
-                     │
-┌────────────────────┴─────────────────────────────────────┐
-│                    Data Layer                              │
-│  sql.js (WASM SQLite) │ JSON Files │ Workspace Files      │
-└──────────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────┐
+│              Browser (SPA)                    │
+│  HTML + CSS + Vanilla JS + xterm.js          │
+└─────────────────────┬────────────────────────┘
+                      │  HTTP REST + WebSocket
+┌─────────────────────┴────────────────────────┐
+│         Express + WebSocket Server            │
+│  Auth | Rate Limit | Routes | Middleware      │
+└─────────────────────┬────────────────────────┘
+                      │
+┌─────────────────────┴────────────────────────┐
+│           Dual-Engine Execution               │
+│                                               │
+│  ┌──────────────┐    ┌──────────────────┐    │
+│  │ Master (SDK) │───▶│ Sub Agent (CLI)  │    │
+│  │ tool_use     │    │ claude --print   │    │
+│  │ Agent tools  │    │ Full toolset     │    │
+│  │ Orchestrate  │    │ Process isolate  │    │
+│  └──────────────┘    └──────────────────┘    │
+│                                               │
+│  Fallback: CLI unavailable -> SDK mode        │
+└─────────────────────┬────────────────────────┘
+                      │
+┌─────────────────────┴────────────────────────┐
+│              Data Layer                       │
+│  sql.js (WASM SQLite) | JSON | Workspace     │
+└──────────────────────────────────────────────┘
 ```
 
 ### Dual-Engine Execution Model
@@ -108,14 +104,12 @@ npm test         # Run backend tests
 
 | Node | Description |
 |------|-------------|
-| **Start** | Workflow entry, passes user input forward |
-| **Agent** | Spawns `claude --print` sub-agent with node-specific model/skills/prompt |
-| **Condition** | Evaluates expression, routes to true/false branch with cascade skip propagation |
+| **Start** | Workflow entry, passes input to downstream nodes |
+| **Agent** | Executes tasks via Anthropic SDK with node-specific model/skills/prompt |
 | **Parallel** | Atomic concurrent spawning of multiple agents in a single message |
 | **Approval** | WebSocket round-trip -- pauses until user approves or rejects |
 | **Merge** | Collects direct upstream outputs, joins with `---` separator |
 | **Sub-workflow** | Recursively invokes another workflow with memory passback |
-| **Code** | Executes JS in VM sandbox (10s timeout, no fs/network) |
 | **End** | Gathers upstream output, produces final result |
 
 ---
