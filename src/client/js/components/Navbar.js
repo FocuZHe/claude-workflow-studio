@@ -31,7 +31,7 @@ window.Navbar = (() => {
     return `
       <div class="navbar-brand">
         <div class="logo-icon">C</div>
-        <span>Claude Agent Studio</span>
+        <span>Claude Workflow Studio</span>
       </div>
       <div class="navbar-title" id="page-title">控制面板</div>
       <div class="navbar-workspace" id="navbar-workspace">

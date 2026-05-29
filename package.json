@@ -1,7 +1,7 @@
 {
-  "name": "claude-agent-studio",
+  "name": "claude-workflow-studio",
   "version": "1.0.0",
-  "description": "Claude Agent Studio - Multi-Agent Orchestration Platform",
+  "description": "Claude Workflow Studio - Multi-Agent Orchestration Platform",
   "main": "src/server/app.js",
   "bin": {
     "multi-agent-platform": "./bin/cli.js"

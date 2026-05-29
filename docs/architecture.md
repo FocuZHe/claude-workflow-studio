@@ -1,4 +1,4 @@
-# Claude Agent Studio — 架构文档
+# Claude Workflow Studio — 架构文档
 
 ## 目录
 

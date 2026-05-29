@@ -1,5 +1,5 @@
 // ═══════════════════════════════════════════════
-// Dashboard Page — Claude Agent Studio
+// Dashboard Page — Claude Workflow Studio
 // ═══════════════════════════════════════════════
 
 window.DashboardPage = (() => {
@@ -14,7 +14,7 @@ window.DashboardPage = (() => {
           </div>
         </div>
         <div class="info-banner">
-          <div style="font-size:14px;font-weight:600;color:var(--accent-cyan);margin-bottom:4px;">Claude Agent Studio</div>
+          <div style="font-size:14px;font-weight:600;color:var(--accent-cyan);margin-bottom:4px;">Claude Workflow Studio</div>
           <div style="font-size:13px;color:var(--text-secondary);">通过拖拽式工作流编排多 Agent 协作，支持并行/串行执行、断点续传、Agent 记忆、知识库和技能管理。</div>
         </div>
         <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:var(--space-4);" id="stats-grid">

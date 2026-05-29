@@ -2,7 +2,7 @@ English | [中文](README.md)
 
 > ⚠️ **Status: Experimental Preview** — This project is developed by a first-year college student with limited knowledge. Features may have many imperfections and undiscovered bugs may exist. **Not thoroughly tested in production environments — do not use for modifying important files.** Feel free to fork and modify. Maintenance time is limited; issues and PRs may not be addressed promptly.
 
-# Claude Agent Studio
+# Claude Workflow Studio
 
 A web-based visual platform for orchestrating, monitoring, and managing multiple Claude Code Agents to collaborate on complex tasks. Features drag-and-drop workflow editor, real-time streaming output, checkpoint/resume, memory transfer, and a skills marketplace.
 
