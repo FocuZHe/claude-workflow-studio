@@ -40,22 +40,17 @@ function loadOrCreateApiKey() {
     logger.warn(`Failed to load API key file: ${e.message}`);
   }
 
-  // Generate new key
-  const apiKey = crypto.randomBytes(32).toString('hex');
-  try {
-    const dir = path.dirname(API_KEY_FILE);
-    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-    fs.writeFileSync(API_KEY_FILE, JSON.stringify({ apiKey }, null, 2), 'utf-8');
-    logger.info('Auto-generated API key saved to data/api-key.json');
-  } catch (e) {
-    logger.error(`Failed to save API key file: ${e.message}`);
-  }
-
-  return apiKey;
+  // No key found and no env var set — authentication is disabled
+  logger.info('No API key configured, authentication disabled');
+  return null;
 }
 
 const apiKey = loadOrCreateApiKey();
-logger.info(`API key authentication is ENABLED. Key: ${apiKey.substring(0, 8)}...`);
+if (apiKey) {
+  logger.info(`API key authentication is ENABLED. Key: ${apiKey.substring(0, 8)}...`);
+} else {
+  logger.info('API key authentication is DISABLED (no key configured)');
+}
 
 /**
  * Paths that should be excluded from authentication
@@ -87,6 +82,11 @@ function shouldSkip(reqPath) {
  */
 function authMiddleware(req, res, next) {
   if (shouldSkip(req.path)) {
+    return next();
+  }
+
+  // If no API key is configured, allow all requests
+  if (!apiKey) {
     return next();
   }
 

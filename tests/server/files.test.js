@@ -74,7 +74,10 @@ function request(method, urlPath, body) {
 
 describe('File API', () => {
   before(async () => {
-    // Ensure workspace exists
+    // Set up test workspace
+    const workspaceRoot = process.env.WORKSPACE_ROOT || path.join(__dirname, '../.temp-data/test-workspace');
+    fs.mkdirSync(workspaceRoot, { recursive: true });
+    FileService.setWorkspaceRoot(workspaceRoot);
     FileService.ensureWorkspace();
     const { app } = createApp();
     server = http.createServer(app);
