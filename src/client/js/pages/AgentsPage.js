@@ -15,6 +15,8 @@ window.AgentsPage = (() => {
   let _totalItems = 0;
   let _loadingMore = false;
   let _pageVer = 1;
+  let _expandedAgentIds = new Set(); // Track which agents are expanded
+  let _childAgentsCache = {}; // Cache: parentId -> child agents array
 
   async function render() {
     _pageVer++;
@@ -104,9 +106,9 @@ window.AgentsPage = (() => {
 
     // Real-time updates
     _wsUnsubs.push(WS.on('agent.statusUpdate', onAgentUpdate));
-    _wsUnsubs.push(WS.on('agent.created', () => loadAgents()));
+    _wsUnsubs.push(WS.on('agent.created', onAgentCreatedOrDeleted));
     _wsUnsubs.push(WS.on('agent.updated', () => loadAgents()));
-    _wsUnsubs.push(WS.on('agent.deleted', () => loadAgents()));
+    _wsUnsubs.push(WS.on('agent.deleted', onAgentCreatedOrDeleted));
 
     // Listen for WebSocket reconnection to refresh data (remove first to prevent duplicates)
     window.removeEventListener('ws:reconnected', _onReconnect);
@@ -133,6 +135,8 @@ window.AgentsPage = (() => {
       if (ver !== _pageVer) return;
       if (page === 1) {
         agents = items;
+        // Preserve expanded state but clear child cache for refresh
+        _childAgentsCache = {};
       } else {
         agents = [...agents, ...items];
       }
@@ -176,11 +180,13 @@ window.AgentsPage = (() => {
     }
 
     grid.innerHTML = filtered.map(a => {
+      const isExpanded = _expandedAgentIds.has(a.id);
+      a._hasChildren = _childAgentsCache[a.id]?.length > 0 || a._childCount > 0;
       if (_selectionMode) {
         const isChecked = _selectedIds.has(a.id);
-        return `<div style="position:relative;"><div style="position:absolute;top:12px;left:12px;z-index:10;"><input type="checkbox" class="batch-checkbox" data-id="${a.id}" ${isChecked ? 'checked' : ''} style="width:16px;height:16px;cursor:pointer;accent-color:var(--accent-cyan);"></div>${AgentCard.render(a)}</div>`;
+        return `<div style="position:relative;"><div style="position:absolute;top:12px;left:12px;z-index:10;"><input type="checkbox" class="batch-checkbox" data-id="${a.id}" ${isChecked ? 'checked' : ''} style="width:16px;height:16px;cursor:pointer;accent-color:var(--accent-cyan);"></div>${AgentCard.render(a, { isExpanded })}</div>`;
       }
-      return AgentCard.render(a);
+      return AgentCard.render(a, { isExpanded });
     }).join('') + renderLoadMoreButton(agents.length, _totalItems, 'load-more-agents');
 
     // Bind card actions
@@ -188,7 +194,27 @@ window.AgentsPage = (() => {
       const id = card.dataset.id;
       card.querySelector('.btn-edit')?.addEventListener('click', (e) => { e.stopPropagation(); openEditModal(id); });
       card.querySelector('.btn-delete')?.addEventListener('click', (e) => { e.stopPropagation(); deleteAgent(id); });
-      if (!_selectionMode) card.addEventListener('click', () => openDetailModal(id));
+      if (!_selectionMode) card.addEventListener('click', (e) => {
+        // Don't open detail if clicking on expand toggle
+        if (e.target.closest('.agent-card-expand-toggle')) return;
+        openDetailModal(id);
+      });
+    });
+
+    // Bind expand toggles
+    grid.querySelectorAll('.agent-card-expand-toggle').forEach(toggle => {
+      toggle.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const agentId = toggle.dataset.agentId;
+        toggleExpand(agentId);
+      });
+    });
+
+    // Render children for expanded agents
+    filtered.forEach(a => {
+      if (_expandedAgentIds.has(a.id)) {
+        renderChildren(a.id);
+      }
     });
 
     // Batch checkbox events
@@ -204,6 +230,63 @@ window.AgentsPage = (() => {
 
     // Update pagination info
     renderPaginationInfo();
+  }
+
+  async function toggleExpand(agentId) {
+    if (_expandedAgentIds.has(agentId)) {
+      _expandedAgentIds.delete(agentId);
+      renderGrid();
+    } else {
+      _expandedAgentIds.add(agentId);
+      renderGrid();
+      await loadChildren(agentId);
+    }
+  }
+
+  async function loadChildren(parentId) {
+    const container = document.querySelector(`.agent-children-container[data-parent-id="${parentId}"]`);
+    if (!container) return;
+
+    // Use cached data if available
+    if (_childAgentsCache[parentId]) {
+      renderChildren(parentId);
+      return;
+    }
+
+    container.innerHTML = `<div style="padding:8px 12px;font-size:12px;color:var(--text-muted);">加载子智能体...</div>`;
+    container.style.display = 'block';
+
+    try {
+      const res = await API.getAgentChildren(parentId);
+      const children = res.data || [];
+      _childAgentsCache[parentId] = children;
+      renderChildren(parentId);
+    } catch (e) {
+      container.innerHTML = `<div style="padding:8px 12px;font-size:12px;color:var(--accent-red);">加载失败</div>`;
+    }
+  }
+
+  function renderChildren(parentId) {
+    const container = document.querySelector(`.agent-children-container[data-parent-id="${parentId}"]`);
+    if (!container) return;
+
+    const children = _childAgentsCache[parentId] || [];
+    if (children.length === 0) {
+      container.innerHTML = `<div style="padding:8px 12px;font-size:12px;color:var(--text-muted);">暂无子智能体</div>`;
+      container.style.display = 'block';
+      return;
+    }
+
+    container.innerHTML = children.map(child => AgentCard.renderChildCard(child)).join('');
+    container.style.display = 'block';
+
+    // Bind child card actions
+    container.querySelectorAll('.child-agent-card').forEach(card => {
+      const id = card.dataset.id;
+      card.querySelector('.btn-edit')?.addEventListener('click', (e) => { e.stopPropagation(); openEditModal(id); });
+      card.querySelector('.btn-delete')?.addEventListener('click', (e) => { e.stopPropagation(); deleteAgent(id); });
+      card.addEventListener('click', () => openDetailModal(id));
+    });
   }
 
   function renderPaginationInfo() {
@@ -227,6 +310,11 @@ window.AgentsPage = (() => {
       agents[idx].status = payload.status;
       _throttledRenderGrid();
     }
+  }
+
+  function onAgentCreatedOrDeleted() {
+    _childAgentsCache = {};
+    loadAgents();
   }
 
   function openCreateModal() {
@@ -388,6 +476,8 @@ window.AgentsPage = (() => {
     window.removeEventListener('ws:reconnected', _onReconnect);
     _selectionMode = false;
     _selectedIds.clear();
+    _expandedAgentIds.clear();
+    _childAgentsCache = {};
     removeBatchActionBar();
   }
 

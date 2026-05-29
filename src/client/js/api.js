@@ -128,6 +128,7 @@ window.API = (() => {
     // Agents
     getAgents: (params) => get('/agents', params),
     getAgent: (id) => get(`/agents/${id}`),
+    getAgentChildren: (id) => get(`/agents/${id}/children`),
     createAgent: (data) => post('/agents', data),
     updateAgent: (id, data) => put(`/agents/${id}`, data),
     deleteAgent: (id) => del(`/agents/${id}`),
@@ -147,6 +148,7 @@ window.API = (() => {
     getWorkflowStatus: (id) => get(`/workflows/${id}/status`),
     getWorkflowExecution: (id) => get(`/workflows/${id}/execution`),
     setWorkflowFolder: (id, folderPath) => put(`/workflows/${id}/folder`, { folderPath }),
+    getNodeLogs: (workflowId, runId) => get(`/workflows/${workflowId}/runs/${runId}/node-logs`),
 
     // Tasks
     getTasks: (params) => get('/tasks', params),

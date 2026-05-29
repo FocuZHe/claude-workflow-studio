@@ -33,6 +33,7 @@ class AgentModel {
       description: data.description || '',
       status: 'idle',
       workspaceId: data.workspaceId !== undefined ? data.workspaceId : null,
+      parentAgentId: data.parentAgentId || null,  // Parent agent ID for two-layer nesting
       config: {
         model: data.config?.model || config.agent.defaultModel,
         systemPrompt: data.config?.systemPrompt || '',
@@ -100,6 +101,19 @@ class AgentModel {
   }
 
   /**
+   * Find child agents by parent ID
+   */
+  static findByParentId(parentId) {
+    const results = [];
+    for (const agent of agents.values()) {
+      if (agent.parentAgentId === parentId) {
+        results.push({ ...agent });
+      }
+    }
+    return results;
+  }
+
+  /**
    * Update agent
    */
   static update(id, data) {
@@ -111,6 +125,7 @@ class AgentModel {
     if (data.description !== undefined) agent.description = data.description;
     if (data.status !== undefined) agent.status = data.status;
     if (data.workspaceId !== undefined) agent.workspaceId = data.workspaceId;
+    if (data.parentAgentId !== undefined) agent.parentAgentId = data.parentAgentId;
     if (data.config) {
       if (data.config.model !== undefined) agent.config.model = data.config.model;
       if (data.config.systemPrompt !== undefined) agent.config.systemPrompt = data.config.systemPrompt;

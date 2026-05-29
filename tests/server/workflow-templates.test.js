@@ -70,7 +70,7 @@ describe('Workflow Templates API', () => {
       assert.strictEqual(res.status, 200);
       assert.strictEqual(res.body.success, true);
       assert.ok(Array.isArray(res.body.data));
-      assert.strictEqual(res.body.data.length, 12);
+      assert.strictEqual(res.body.data.length, 22);
       assert.ok(res.body.data.every(t => t.isBuiltin === true));
     });
 
@@ -101,8 +101,8 @@ describe('Workflow Templates API', () => {
       const res = await request('GET', '/api/workflow-templates');
 
       assert.strictEqual(res.status, 200);
-      // 12 built-in + 1 custom
-      assert.strictEqual(res.body.data.length, 13);
+      // 22 built-in + 1 custom
+      assert.strictEqual(res.body.data.length, 23);
       const custom = res.body.data.find(t => t.name === 'Custom Template');
       assert.ok(custom);
       assert.strictEqual(custom.isBuiltin, false);

@@ -94,6 +94,18 @@ router.get('/:id', (req, res, next) => {
 });
 
 /**
+ * GET /api/agents/:id/children - Get child agents (two-layer nesting)
+ */
+router.get('/:id/children', (req, res, next) => {
+  try {
+    const children = AgentService.getChildren(req.params.id);
+    res.json({ success: true, data: children });
+  } catch (err) {
+    next(err);
+  }
+});
+
+/**
  * PUT /api/agents/:id - Update agent
  */
 router.put('/:id',

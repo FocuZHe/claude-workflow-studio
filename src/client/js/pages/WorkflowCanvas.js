@@ -41,6 +41,7 @@ window.WorkflowCanvas = (() => {
     end: 'E',
     agent: 'A',
     approval: '✓',
+    condition: Icon.svg('git-branch', 12),
     developer: '{}',
     reviewer: 'V',
     tester: 'T',
@@ -56,6 +57,7 @@ window.WorkflowCanvas = (() => {
     end: 'var(--accent-red)',
     agent: 'var(--accent-cyan)',
     approval: 'var(--accent-amber)',
+    condition: '#f59e0b',
     developer: 'var(--accent-purple)',
     reviewer: 'var(--accent-amber)',
     tester: 'var(--accent-green)',
@@ -69,6 +71,7 @@ window.WorkflowCanvas = (() => {
   // Node type definitions for the add-node modal
   const NODE_TYPES = [
     { type: 'agent',    label: '智能体',     icon: 'A', color: 'var(--accent-cyan)' },
+    { type: 'condition', label: '条件判断', icon: Icon.svg('git-branch', 12), color: '#f59e0b' },
     { type: 'parallel', label: '并行处理',   icon: Icon.svg('zap', 12), color: 'var(--accent-amber)' },
     { type: 'subworkflow', label: '子工作流', icon: Icon.svg('folder-plus', 12), color: '#8b5cf6' },
     { type: 'approval', label: '人工审核',   icon: '✓', color: 'var(--accent-amber)' },
@@ -185,6 +188,49 @@ window.WorkflowCanvas = (() => {
     canvasContainer.querySelectorAll('.node-live-output').forEach(el => el.remove());
   }
 
+  // ── WebSocket Node Update Handler ──
+
+  function onNodeUpdate(payload) {
+    if (!_currentWorkflowId || payload.workflowId !== _currentWorkflowId) return;
+
+    const node = nodes.find(n => n.id === payload.nodeId);
+    if (!node) return;
+
+    // Update node data
+    node.status = payload.status;
+    if (payload.output !== undefined) node.output = payload.output;
+    if (payload.error !== undefined) node.error = payload.error;
+    if (payload.startedAt) node.startedAt = payload.startedAt;
+    if (payload.completedAt) node.completedAt = payload.completedAt;
+
+    // Update visual state on canvas
+    const svgNodeEl = document.querySelector(`g.wf-node[data-id="${payload.nodeId}"]`);
+    if (svgNodeEl) {
+      updateNodeVisual(svgNodeEl, payload.status, payload.error);
+    }
+
+    // Full re-render to update status bar text, color, etc.
+    renderAll();
+
+    // Refresh detail panel if this node is selected
+    if (selectedNodeId === payload.nodeId) {
+      showNodeDetail(payload.nodeId);
+    }
+  }
+
+  function updateNodeVisual(nodeEl, status, error) {
+    // Remove existing status data attribute (renderAll handles re-render,
+    // but for immediate visual feedback before full re-render)
+    nodeEl.setAttribute('data-status', status || 'pending');
+
+    // Store error on the node data for detail panel
+    if (error) {
+      const nodeId = nodeEl.dataset.id;
+      const node = nodes.find(n => n.id === nodeId);
+      if (node) node.error = error;
+    }
+  }
+
   function init(workflow) {
     // Clean up previous WS listeners
     _wsUnsubs.forEach(fn => fn());
@@ -294,6 +340,9 @@ window.WorkflowCanvas = (() => {
     // Listen for Claude stream events to show live output on nodes
     _wsUnsubs.push(WS.on('claude.stream', onClaudeStream));
 
+    // Listen for node status updates during execution
+    _wsUnsubs.push(WS.on('workflow.nodeUpdate', onNodeUpdate));
+
     // Snapshot buttons
     document.getElementById('canvas-snapshot-btn')?.addEventListener('click', saveSnapshot);
     document.getElementById('canvas-snapshot-list-btn')?.addEventListener('click', showSnapshotList);
@@ -379,7 +428,7 @@ window.WorkflowCanvas = (() => {
           <rect class="wf-node-status-bar" width="${NODE_W}" height="3" rx="2" fill="${statusCfg.color}"/>
 
           <!-- Main body background -->
-          <rect y="3" width="${NODE_W}" height="77" rx="8" fill="var(--bg-secondary)" stroke="${isSelected ? 'var(--accent-cyan)' : statusCfg.color}" stroke-width="${isSelected ? 2.5 : 1.5}"/>
+          <rect y="3" width="${NODE_W}" height="77" rx="8" fill="var(--bg-secondary)" stroke="${isSelected ? 'var(--accent-cyan)' : (status === 'failed' ? '#ef4444' : statusCfg.color)}" stroke-width="${isSelected ? 2.5 : (status === 'failed' ? 2 : 1.5)}"/>
 
           <!-- Role icon circle -->
           <circle cx="20" cy="38" r="14" fill="${roleColor}" opacity="0.15"/>
@@ -419,6 +468,14 @@ window.WorkflowCanvas = (() => {
           <circle cx="${NODE_W - 12}" cy="14" r="4" fill="${statusCfg.color}" class="wf-status-dot">
             ${status === 'running' ? '<animate attributeName="opacity" values="1;0.3;1" dur="1.5s" repeatCount="indefinite"/>' : ''}
           </circle>
+
+          ${status === 'failed' ? `
+            <!-- Error warning icon (top-right, next to status dot) -->
+            <circle cx="${NODE_W - 26}" cy="14" r="7" fill="var(--accent-red)" opacity="0.9">
+              <animate attributeName="opacity" values="0.9;0.5;0.9" dur="2s" repeatCount="indefinite"/>
+            </circle>
+            <text x="${NODE_W - 26}" y="18" text-anchor="middle" font-size="10" font-weight="700" fill="#fff" font-family="var(--font-sans)">!</text>
+          ` : ''}
 
           ${breakpoints.has(node.id) ? `
             <!-- Breakpoint indicator (top-left) -->
@@ -803,6 +860,25 @@ window.WorkflowCanvas = (() => {
           </div>
         ` : ''}
 
+        ${node.type === 'condition' ? `
+          <div class="form-group">
+            <div class="form-label">条件匹配文本</div>
+            <input type="text" id="detail-cfg-condition-pattern" value="${escapeXml(node.config?.pattern || '')}" placeholder="上游输出中包含此文本则为"通过""
+                  style="width:100%;padding:6px 10px;border:1px solid var(--border-subtle);border-radius:4px;background:var(--bg-deep);color:var(--text-primary);font-size:12px;">
+          </div>
+          <div class="form-group" style="margin-top:8px;">
+            <div class="form-label">通过标签</div>
+            <input type="text" id="detail-cfg-condition-true-label" value="${escapeXml(node.config?.trueLabel || '通过')}" placeholder="条件满足时的标签"
+                  style="width:100%;padding:6px 10px;border:1px solid var(--border-subtle);border-radius:4px;background:var(--bg-deep);color:var(--text-primary);font-size:12px;">
+          </div>
+          <div class="form-group" style="margin-top:8px;">
+            <div class="form-label">不通过标签</div>
+            <input type="text" id="detail-cfg-condition-false-label" value="${escapeXml(node.config?.falseLabel || '不通过')}" placeholder="条件不满足时的标签"
+                  style="width:100%;padding:6px 10px;border:1px solid var(--border-subtle);border-radius:4px;background:var(--bg-deep);color:var(--text-primary);font-size:12px;">
+          </div>
+          <button class="btn btn-sm btn-primary" id="detail-save-condition" style="margin-top:8px;width:100%;">保存条件配置</button>
+        ` : ''}
+
         ${node.type === 'subworkflow' ? `
           <div class="form-group">
             <div class="form-label">子工作流</div>
@@ -842,6 +918,22 @@ window.WorkflowCanvas = (() => {
             </div>
           </div>
         ` : ''}
+
+        ${node.error ? `
+          <div class="form-group" style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border-subtle);">
+            <div class="form-label" style="color:var(--accent-red);">错误信息</div>
+            <div style="background:var(--bg-deep);padding:8px;border-radius:4px;border-left:3px solid var(--accent-red);font-size:12px;font-family:var(--font-mono);word-break:break-word;max-height:150px;overflow-y:auto;">
+              ${escapeXml(node.error)}
+            </div>
+          </div>
+        ` : ''}
+
+        <div id="node-execution-logs" style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border-subtle);">
+          <div style="font-size:12px;font-weight:600;margin-bottom:8px;">执行日志</div>
+          <div id="node-logs-content" style="font-size:11px;color:var(--text-muted);">
+            <div>点击"执行"后可查看此节点的详细日志</div>
+          </div>
+        </div>
       </div>
     `;
 
@@ -854,9 +946,21 @@ window.WorkflowCanvas = (() => {
 
     // Bind config save buttons
     bindDetailConfigSave(node);
+
+    // Load node execution logs if workflow has been executed
+    loadNodeExecutionLogs(nodeId);
   }
 
   function bindDetailConfigSave(node) {
+    // Condition config save
+    document.getElementById('detail-save-condition')?.addEventListener('click', () => {
+      if (!node.config) node.config = {};
+      node.config.pattern = document.getElementById('detail-cfg-condition-pattern')?.value || '';
+      node.config.trueLabel = document.getElementById('detail-cfg-condition-true-label')?.value || '通过';
+      node.config.falseLabel = document.getElementById('detail-cfg-condition-false-label')?.value || '不通过';
+      Toast.show('条件配置已更新（请点击保存按钮持久化）', 'info');
+    });
+
     // Subworkflow config save
     document.getElementById('detail-save-subworkflow')?.addEventListener('click', () => {
       if (!node.config) node.config = {};
@@ -906,6 +1010,54 @@ window.WorkflowCanvas = (() => {
     selectedNodeId = null;
     document.getElementById('wf-detail-panel')?.remove();
     renderAll();
+  }
+
+  // ── Node Execution Logs ──
+
+  async function loadNodeExecutionLogs(nodeId) {
+    if (!_currentWorkflow) return;
+    const wfId = _currentWorkflow.id;
+    if (!wfId) return;
+
+    // Find the latest runId from execution log
+    const executionLog = _currentWorkflow.executionLog || [];
+    const latestRun = executionLog.length > 0 ? executionLog[executionLog.length - 1] : null;
+    const runId = latestRun?.runId;
+    if (!runId) return;
+
+    try {
+      const res = await API.getNodeLogs(wfId, runId);
+      if (res.success && res.data && res.data[nodeId]) {
+        const log = res.data[nodeId];
+        const logsContent = document.getElementById('node-logs-content');
+        if (logsContent) {
+          logsContent.innerHTML = `
+            <div style="margin-bottom:4px;">
+              <span style="color:${log.status === 'completed' ? 'var(--accent-green)' : log.status === 'failed' ? 'var(--accent-red)' : 'var(--text-muted)'};">
+                ${log.status === 'completed' ? '✓ 已完成' : log.status === 'failed' ? '✗ 失败' : '○ ' + escapeXml(log.status || '')}
+              </span>
+            </div>
+            ${log.duration ? `<div style="margin-bottom:4px;">耗时: ${formatDuration(log.duration)}</div>` : ''}
+            ${log.model ? `<div style="margin-bottom:4px;">模型: ${escapeXml(log.model)}</div>` : ''}
+            ${log.tokens ? `<div style="margin-bottom:4px;">Token: ${log.tokens.input} 输入 / ${log.tokens.output} 输出</div>` : ''}
+            ${log.error ? `<div style="color:var(--accent-red);margin-bottom:4px;">错误: ${escapeXml(log.error)}</div>` : ''}
+            ${log.output ? `<div style="margin-top:8px;">
+              <div style="font-size:11px;color:var(--text-muted);margin-bottom:4px;">输出摘要</div>
+              <pre style="font-size:11px;color:var(--text-secondary);background:var(--bg-primary);padding:8px;border-radius:4px;max-height:200px;overflow:auto;white-space:pre-wrap;word-break:break-all;">${escapeXml(log.output.substring(0, 1000))}</pre>
+            </div>` : ''}
+          `;
+        }
+      }
+    } catch (e) {
+      // Silent fail - logs are optional, endpoint may not exist yet
+    }
+  }
+
+  function formatDuration(ms) {
+    if (!ms) return '--';
+    if (ms < 1000) return ms + 'ms';
+    if (ms < 60000) return (ms / 1000).toFixed(1) + 's';
+    return Math.floor(ms / 60000) + 'm ' + Math.round((ms % 60000) / 1000) + 's';
   }
 
   // ── Add Node ──
@@ -1007,6 +1159,26 @@ window.WorkflowCanvas = (() => {
       
 
 
+      case 'condition':
+        fieldsHtml += `
+          <div class="form-group" style="margin-top:8px;">
+            <div class="form-label">条件匹配文本</div>
+            <input type="text" id="node-cfg-condition-pattern" class="form-input" value="" placeholder="上游输出中包含此文本则为"通过"" style="width:100%;padding:6px 10px;border:1px solid var(--border-subtle);border-radius:4px;background:var(--bg-deep);color:var(--text-primary);font-size:12px;">
+          </div>
+          <div class="form-group" style="margin-top:8px;">
+            <div class="form-label">通过标签</div>
+            <input type="text" id="node-cfg-condition-true-label" class="form-input" value="通过" placeholder="条件满足时的标签" style="width:100%;padding:6px 10px;border:1px solid var(--border-subtle);border-radius:4px;background:var(--bg-deep);color:var(--text-primary);font-size:12px;">
+          </div>
+          <div class="form-group" style="margin-top:8px;">
+            <div class="form-label">不通过标签</div>
+            <input type="text" id="node-cfg-condition-false-label" class="form-input" value="不通过" placeholder="条件不满足时的标签" style="width:100%;padding:6px 10px;border:1px solid var(--border-subtle);border-radius:4px;background:var(--bg-deep);color:var(--text-primary);font-size:12px;">
+          </div>
+          <div style="font-size:11px;color:var(--text-muted);margin-top:4px;">
+            提示：连接输出端口后，双击连线可设置标签为 "true" 或 "false" 来区分通过/不通过分支
+          </div>
+        `;
+        break;
+
       case 'parallel':
         fieldsHtml += `
           <div class="form-group" style="margin-top:8px;">
@@ -1085,6 +1257,12 @@ window.WorkflowCanvas = (() => {
     const config = {};
 
     switch (type) {
+      case 'condition':
+        config.pattern = document.getElementById('node-cfg-condition-pattern')?.value || '';
+        config.trueLabel = document.getElementById('node-cfg-condition-true-label')?.value || '通过';
+        config.falseLabel = document.getElementById('node-cfg-condition-false-label')?.value || '不通过';
+        break;
+
       case 'approval':
         config.approvalTitle = document.getElementById('node-cfg-approval-title')?.value || '';
         config.approvalDescription = document.getElementById('node-cfg-approval-desc')?.value || '';

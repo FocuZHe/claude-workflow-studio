@@ -109,6 +109,33 @@ class MasterAgentService {
             `将以下子工作流的所有步骤作为主流程的一部分内联执行（不启动独立进程），完成后继续主流程的下一个步骤：\n\n${subStepsText}`;
           break;
         }
+        case 'condition': {
+          const pattern = node.config?.pattern || node.config?.condition || '';
+          const trueLabel = node.config?.trueLabel || '通过';
+          const falseLabel = node.config?.falseLabel || '不通过';
+
+          // Find downstream nodes for each branch
+          const trueTargets = edges
+            .filter(e => (e.source || e.from) === nodeId && (e.label === 'true' || e.label === '通过' || !e.label))
+            .map(e => e.target || e.to);
+          const falseTargets = edges
+            .filter(e => (e.source || e.from) === nodeId && (e.label === 'false' || e.label === '不通过'))
+            .map(e => e.target || e.to);
+
+          instruction = `【条件判断节点 — 根据上游输出决定执行哪个分支】\n` +
+            `   1. 读取上游节点的输出\n` +
+            `   2. 判断条件: "${pattern}"\n` +
+            `   3. 如果条件满足（输出包含 "${pattern}"）:\n` +
+            (trueTargets.length > 0
+              ? trueTargets.map(id => `      - 调用 Agent_${id}({ task: "${nodeById[id]?.defaultPrompt || '执行任务'}" })`).join('\n')
+              : '      - 继续执行后续步骤') + '\n' +
+            `   4. 如果条件不满足:\n` +
+            (falseTargets.length > 0
+              ? falseTargets.map(id => `      - 调用 Agent_${id}({ task: "${nodeById[id]?.defaultPrompt || '执行任务'}" })`).join('\n')
+              : '      - 跳过此分支，继续执行后续步骤') + '\n' +
+            `   5. 输出: [条件判断] 条件"${pattern}" ${trueLabel}/${falseLabel}，执行了${trueTargets.length > 0 ? '通过' : '不通过'}分支`;
+          break;
+        }
         case 'approval': {
           const approvalTitle = node.config?.approvalTitle || node.label || '审核请求';
           const approvalDesc = node.config?.approvalDescription || '';

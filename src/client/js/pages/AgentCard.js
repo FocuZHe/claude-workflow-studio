@@ -3,17 +3,31 @@
 // ═══════════════════════════════════════════════
 
 window.AgentCard = (() => {
-  function render(agent) {
+  function render(agent, options = {}) {
     const lastLog = agent.logs && agent.logs.length > 0
       ? agent.logs[agent.logs.length - 1]
       : null;
+    const isChild = options.isChild === true;
+    const hasChildren = agent._hasChildren === true;
+    const isExpanded = options.isExpanded === true;
+
+    const cardClass = isChild ? 'card card-agent agent-card child-agent-card' : 'card card-agent agent-card hover-lift card-enter';
+    const indentStyle = isChild ? 'margin-left:24px;border-left:2px dashed var(--accent-purple);' : '';
 
     return `
-      <div class="card card-agent agent-card hover-lift card-enter" data-id="${agent.id}">
+      <div class="${cardClass}" data-id="${agent.id}" data-parent-id="${agent.parentAgentId || ''}" style="${indentStyle}">
+        ${!isChild ? `
+          <div class="agent-card-expand-toggle" data-agent-id="${agent.id}" title="展开/收起子智能体">
+            <span class="expand-icon ${isExpanded ? 'expanded' : ''}">
+              ${Icon.svg('chevron-right', 14)}
+            </span>
+          </div>
+        ` : ''}
         <div class="card-header">
           <div>
             <div class="card-title" style="margin-bottom:4px;">${escapeHtml(agent.name)}</div>
             <span class="badge badge-${agent.role || 'custom'}" style="font-size:10px;">${agent.role || 'custom'}</span>
+            ${isChild ? '<span class="badge badge-sub" style="font-size:9px;margin-left:4px;">子智能体</span>' : ''}
           </div>
           ${StatusBadge.render(agent.status)}
         </div>
@@ -33,7 +47,12 @@ window.AgentCard = (() => {
           <button class="btn btn-sm btn-danger btn-delete" title="删除">${Icon.svg('delete', 14)}</button>
         </div>
       </div>
+      ${!isChild ? `<div class="agent-children-container" data-parent-id="${agent.id}" style="display:${isExpanded ? 'block' : 'none'};"></div>` : ''}
     `;
+  }
+
+  function renderChildCard(agent) {
+    return render(agent, { isChild: true });
   }
 
   function escapeHtml(str) {
@@ -42,5 +61,5 @@ window.AgentCard = (() => {
     return d.innerHTML;
   }
 
-  return { render };
+  return { render, renderChildCard };
 })();

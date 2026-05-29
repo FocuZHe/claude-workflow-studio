@@ -417,6 +417,64 @@ const BUILTIN_WORKFLOW_TEMPLATES = [
       { id: 'e4', source: 'n4', target: 'n5' }
     ],
     isBuiltin: true
+  },
+  {
+    id: 'bug-fix-loop',
+    name: 'Bug 修复闭环',
+    category: '开发',
+    description: '分析 Bug → 定位代码 → 修复 → 测试 → 验证',
+    nodes: [
+      { id: 'n1', type: 'start', label: '开始', position: { x: 100, y: 200 }, config: {} },
+      { id: 'n2', type: 'agent', label: '分析 Bug', position: { x: 300, y: 200 }, config: { systemPrompt: '分析 Bug 报告，定位问题根因，输出修复方案。', model: 'sonnet' } },
+      { id: 'n3', type: 'agent', label: '修复代码', position: { x: 500, y: 200 }, config: { systemPrompt: '根据分析结果修复代码，确保修复不引入新问题。', model: 'sonnet' } },
+      { id: 'n4', type: 'agent', label: '运行测试', position: { x: 700, y: 200 }, config: { systemPrompt: '运行测试验证修复是否正确，输出测试结果。', model: 'haiku' } },
+      { id: 'n5', type: 'condition', label: '测试通过?', position: { x: 900, y: 200 }, config: { pattern: '通过', trueLabel: '通过', falseLabel: '失败' } },
+      { id: 'n6', type: 'end', label: '完成', position: { x: 1100, y: 150 }, config: {} },
+      { id: 'n7', type: 'agent', label: '重新修复', position: { x: 900, y: 350 }, config: { systemPrompt: '测试失败，分析失败原因并重新修复代码。', model: 'sonnet' } }
+    ],
+    edges: [
+      { id: 'e1', source: 'n1', target: 'n2' }, { id: 'e2', source: 'n2', target: 'n3' }, { id: 'e3', source: 'n3', target: 'n4' },
+      { id: 'e4', source: 'n4', target: 'n5' }, { id: 'e5', source: 'n5', target: 'n6', label: 'true' },
+      { id: 'e6', source: 'n5', target: 'n7', label: 'false' }, { id: 'e7', source: 'n7', target: 'n4' }
+    ],
+    isBuiltin: true
+  },
+  {
+    id: 'doc-generation',
+    name: '文档生成',
+    category: '文档',
+    description: '读取代码 → 生成 API 文档 → 生成 README → 审查',
+    nodes: [
+      { id: 'n1', type: 'start', label: '开始', position: { x: 100, y: 200 }, config: {} },
+      { id: 'n2', type: 'agent', label: '分析代码', position: { x: 300, y: 200 }, config: { systemPrompt: '分析项目代码结构，提取关键模块和 API 接口。', model: 'sonnet' } },
+      { id: 'n3', type: 'agent', label: '生成 API 文档', position: { x: 500, y: 200 }, config: { systemPrompt: '根据代码分析结果，生成详细的 API 文档，包含参数说明和示例。', model: 'sonnet' } },
+      { id: 'n4', type: 'agent', label: '生成 README', position: { x: 700, y: 200 }, config: { systemPrompt: '根据项目结构和 API 文档，生成完整的 README 文件。', model: 'sonnet' } },
+      { id: 'n5', type: 'approval', label: '审查文档', position: { x: 900, y: 200 }, config: { approvalTitle: '审查生成的文档' } },
+      { id: 'n6', type: 'end', label: '完成', position: { x: 1100, y: 200 }, config: {} }
+    ],
+    edges: [
+      { id: 'e1', source: 'n1', target: 'n2' }, { id: 'e2', source: 'n2', target: 'n3' }, { id: 'e3', source: 'n3', target: 'n4' },
+      { id: 'e4', source: 'n4', target: 'n5' }, { id: 'e5', source: 'n5', target: 'n6' }
+    ],
+    isBuiltin: true
+  },
+  {
+    id: 'security-audit',
+    name: '安全审计',
+    category: '安全',
+    description: '扫描依赖 → 检查代码 → 生成报告 → 修复高危项',
+    nodes: [
+      { id: 'n1', type: 'start', label: '开始', position: { x: 100, y: 200 }, config: {} },
+      { id: 'n2', type: 'agent', label: '依赖扫描', position: { x: 300, y: 200 }, config: { systemPrompt: '检查项目依赖的安全漏洞，列出高危和中危漏洞。', model: 'haiku' } },
+      { id: 'n3', type: 'agent', label: '代码审查', position: { x: 500, y: 200 }, config: { systemPrompt: '审查代码中的安全问题：XSS、SQL 注入、路径遍历、硬编码密钥等。', model: 'sonnet' } },
+      { id: 'n4', type: 'agent', label: '生成报告', position: { x: 700, y: 200 }, config: { systemPrompt: '汇总依赖扫描和代码审查结果，生成安全审计报告，按严重程度分级。', model: 'sonnet' } },
+      { id: 'n5', type: 'end', label: '完成', position: { x: 900, y: 200 }, config: {} }
+    ],
+    edges: [
+      { id: 'e1', source: 'n1', target: 'n2' }, { id: 'e2', source: 'n2', target: 'n3' }, { id: 'e3', source: 'n3', target: 'n4' },
+      { id: 'e4', source: 'n4', target: 'n5' }
+    ],
+    isBuiltin: true
   }
 ];
 

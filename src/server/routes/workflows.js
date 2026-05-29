@@ -643,7 +643,7 @@ async function generateWorkflowByAI(description) {
     }
   ],
   "edges": [
-    { "id": "e1", "source": "节点id", "target": "节点id" }
+    { "id": "e1", "source": "节点id", "target": "节点id", "label": "可选标签（condition节点的分支标签为'true'或'false'）" }
   ]
 }
 
@@ -651,6 +651,7 @@ async function generateWorkflowByAI(description) {
 - "start": 开始节点（必须有，1个）— 工作流入口，用户输入会在任务创建时传入，不需要额外的input节点
 - "end": 结束节点（必须有，1个）— 工作流出口，汇总直接上游节点的输出
 - "agent": Agent节点 — 执行具体任务的AI节点，必须写详细的systemPrompt和选择合适的model
+- "condition": 条件判断节点 — 根据上游输出决定走哪个分支，config中需设置pattern（匹配文本）、trueLabel和falseLabel，连接时edge.label设为"true"或"false"
 - "approval": 审批节点 — 在工作流中途需要人工审核确认时使用（如审核报告质量、确认方案选择）
 - "parallel": 并行节点 — 同时执行多个后续任务
 - "merge": 合并节点 — 合并多个并行节点的输出（parallel后必须有merge）
@@ -1365,6 +1366,67 @@ router.get('/:id/execution', (req, res, next) => {
     const execution = WorkflowService.getExecutionStatus(req.params.id);
     res.json({ success: true, data: execution });
   } catch (err) {
+    next(err);
+  }
+});
+
+/**
+ * GET /api/workflows/:id/runs/:runId/node-logs - Get node execution logs for a specific run
+ */
+router.get('/:id/runs/:runId/node-logs', async (req, res, next) => {
+  try {
+    const { id, runId } = req.params;
+    const workflow = WorkflowModel.findById(id);
+    if (!workflow) {
+      return res.status(404).json({ success: false, error: '工作流不存在' });
+    }
+
+    // Load checkpoint data for this run
+    const CheckpointService = require('../services/CheckpointService');
+    const checkpoint = CheckpointService.loadCheckpoint(id, runId);
+
+    if (!checkpoint || !checkpoint.completedNodes || Object.keys(checkpoint.completedNodes).length === 0) {
+      return res.json({ success: true, data: {} });
+    }
+
+    // Build node log map from checkpoint data
+    const nodeLogs = {};
+    const completedNodes = checkpoint.completedNodes || {};
+    for (const [nodeId, nodeData] of Object.entries(completedNodes)) {
+      nodeLogs[nodeId] = {
+        nodeId,
+        status: nodeData.status || 'completed',
+        output: nodeData.output || '',
+        startedAt: nodeData.startedAt || checkpoint.timestamp || null,
+        completedAt: nodeData.completedAt || checkpoint.timestamp || null,
+        duration: nodeData.duration || null,
+        model: nodeData.model || null,
+        tokens: nodeData.tokens || null,
+        error: nodeData.error || null
+      };
+    }
+
+    // Also include node outputs from checkpoint
+    const nodeOutputs = checkpoint.nodeOutputs || {};
+    for (const [nodeId, output] of Object.entries(nodeOutputs)) {
+      if (!nodeLogs[nodeId]) {
+        nodeLogs[nodeId] = {
+          nodeId,
+          status: 'completed',
+          output: typeof output === 'string' ? output : JSON.stringify(output),
+          startedAt: checkpoint.timestamp || null,
+          completedAt: checkpoint.timestamp || null,
+          duration: null,
+          model: null,
+          tokens: null,
+          error: null
+        };
+      }
+    }
+
+    res.json({ success: true, data: nodeLogs });
+  } catch (err) {
+    logger.error('Failed to get node logs:', err);
     next(err);
   }
 });

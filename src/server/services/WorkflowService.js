@@ -383,8 +383,10 @@ class WorkflowService {
    */
   static async _executeMasterAgent(workflowId, runId, input, workflow) {
     const agentNodes = workflow.nodes.filter(n => n.type === 'agent');
+    const conditionNodes = workflow.nodes.filter(n => n.type === 'condition');
+    const executableNodes = workflow.nodes.filter(n => n.type !== 'start' && n.type !== 'end');
     const workspaceRoot = workflow.folderPath || FileService.getWorkspaceRoot() || process.cwd();
-    if (agentNodes.length === 0) {
+    if (agentNodes.length === 0 && conditionNodes.length === 0) {
       // No executable nodes — mark all non-meta nodes as completed and finish
       for (const node of workflow.nodes) {
         if (node.type !== 'start' && node.type !== 'end') {
@@ -397,13 +399,16 @@ class WorkflowService {
       return;
     }
 
-    // 更新状态：start→completed，agent→running
+    // 更新状态：start→completed，agent/condition→running
     const startNode = workflow.nodes.find(n => n.type === 'start');
     if (startNode) {
       WorkflowModel.updateNodeStatus(workflowId, startNode.id, 'completed');
       WorkflowService._broadcastNodeUpdate(workflowId, runId, startNode.id);
     }
     for (const node of agentNodes) {
+      WorkflowModel.updateNodeStatus(workflowId, node.id, 'running');
+    }
+    for (const node of conditionNodes) {
       WorkflowModel.updateNodeStatus(workflowId, node.id, 'running');
     }
     WorkflowModel.update(workflowId, { executionStatus: 'running' });
@@ -472,16 +477,16 @@ class WorkflowService {
       // Handle paused output
       if (typeof output === 'string' && output.startsWith('[PAUSED]')) {
         WorkflowService._saveCheckpoint(workflowId, workspaceRoot, workflow.nodes, output);
-        for (const node of agentNodes) {
+        for (const node of executableNodes) {
           if (node.status === 'running') WorkflowModel.updateNodeStatus(workflowId, node.id, 'paused');
         }
         logger.info(`Workflow ${workflowId} paused gracefully`, { runId });
         return;
       }
 
-      // Mark all agent nodes as completed and save checkpoints
+      // Mark all executable nodes as completed and save checkpoints
       WorkflowService._saveCheckpoint(workflowId, workspaceRoot, workflow.nodes, output);
-      for (const node of agentNodes) {
+      for (const node of executableNodes) {
         WorkflowModel.updateNodeStatus(workflowId, node.id, 'completed');
       }
       const endNode = workflow.nodes.find(n => n.type === 'end');
@@ -579,18 +584,27 @@ class WorkflowService {
       const fs = require('fs');
       const path = require('path');
 
+      const completedAt = new Date().toISOString();
+
       // Parse master output to extract per-node results
       for (const node of nodes) {
         if (node.type === 'start' || node.type === 'end') continue;
-        // Save each node's completion status
+        // Save each node's completion status with enhanced metadata
         const nodeFile = path.join(checkpointDir, `${node.id}.status.json`);
+        const startedAt = node.startedAt || completedAt;
+        const durationMs = node.startedAt ? (new Date(completedAt) - new Date(node.startedAt)) : null;
         fs.writeFileSync(nodeFile, JSON.stringify({
           nodeId: node.id,
           label: node.label || node.id,
           type: node.type,
           status: node.status || 'completed',
           output: node.output || '',
-          updatedAt: new Date().toISOString()
+          startedAt,
+          completedAt,
+          duration: durationMs,
+          model: node.config?.model || null,
+          error: node.error || null,
+          updatedAt: completedAt
         }, null, 2), 'utf-8');
       }
 
@@ -598,7 +612,7 @@ class WorkflowService {
       const manifestFile = path.join(checkpointDir, 'manifest.json');
       fs.writeFileSync(manifestFile, JSON.stringify({
         workflowId,
-        completedAt: new Date().toISOString(),
+        completedAt,
         nodesCompleted: nodes.filter(n => n.type !== 'start' && n.type !== 'end').length,
         outputLength: masterOutput.length
       }, null, 2), 'utf-8');
@@ -612,19 +626,27 @@ class WorkflowService {
   /**
    * Save a single node's checkpoint file
    */
-  static _saveNodeCheckpoint(workspaceRoot, nodeId, { label, output }) {
+  static _saveNodeCheckpoint(workspaceRoot, nodeId, { label, output, model, startedAt, error }) {
     try {
       const fs = require('fs');
       const path = require('path');
       const checkpointDir = path.join(workspaceRoot, '.checkpoint');
       if (!fs.existsSync(checkpointDir)) fs.mkdirSync(checkpointDir, { recursive: true });
       const nodeFile = path.join(checkpointDir, `${nodeId}.status.json`);
+      const completedAt = new Date().toISOString();
+      const started = startedAt ? new Date(startedAt) : null;
+      const durationMs = started ? (new Date(completedAt) - started) : null;
       fs.writeFileSync(nodeFile, JSON.stringify({
         nodeId,
         label: label || nodeId,
-        status: 'completed',
+        status: error ? 'failed' : 'completed',
         output: (output || '').substring(0, 10000),
-        updatedAt: new Date().toISOString()
+        startedAt: startedAt || completedAt,
+        completedAt,
+        duration: durationMs,
+        model: model || null,
+        error: error || null,
+        updatedAt: completedAt
       }, null, 2), 'utf-8');
     } catch (e) {
       logger.warn(`Failed to save node checkpoint: ${e.message}`);
@@ -881,6 +903,14 @@ class WorkflowService {
           if (out) mergeOutputs.push(out);
         }
         return mergeOutputs.join('\n---\n') || '[Simulated] Merge completed';
+      }
+
+      case 'condition': {
+        const pattern = node.config?.pattern || '';
+        const trueLabel = node.config?.trueLabel || '通过';
+        const falseLabel = node.config?.falseLabel || '不通过';
+        // In simulation, assume condition passes
+        return `[Simulated] 条件判断 "${pattern}" → ${trueLabel}`;
       }
 
       case 'subworkflow':

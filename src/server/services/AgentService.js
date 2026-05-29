@@ -61,6 +61,18 @@ class AgentService {
   }
 
   /**
+   * Get child agents by parent ID
+   */
+  static getChildren(parentId) {
+    // Verify parent exists
+    const parent = AgentModel.findById(parentId);
+    if (!parent) {
+      throw new AppError('NOT_FOUND', `Agent with id '${parentId}' not found`, 404);
+    }
+    return AgentModel.findByParentId(parentId);
+  }
+
+  /**
    * Update agent
    */
   static update(id, data) {

@@ -23,15 +23,42 @@ class CheckpointService {
   static saveCheckpoint(workflowId, runId, data) {
     try {
       const filePath = CheckpointService._getCheckpointPath(workflowId, runId);
+      const now = new Date().toISOString();
+
+      // Enhance completedNodes with metadata if provided
+      const completedNodes = {};
+      for (const [nodeId, nodeData] of Object.entries(data.completedNodes || {})) {
+        if (typeof nodeData === 'object' && nodeData !== null) {
+          completedNodes[nodeId] = {
+            status: nodeData.status || 'completed',
+            output: nodeData.output || '',
+            startedAt: nodeData.startedAt || now,
+            completedAt: nodeData.completedAt || now,
+            duration: nodeData.duration || null,
+            model: nodeData.model || null,
+            tokens: nodeData.tokens || null,
+            error: nodeData.error || null
+          };
+        } else {
+          // Legacy format: just status string
+          completedNodes[nodeId] = { status: nodeData, output: '' };
+        }
+      }
+
       const checkpoint = {
         workflowId,
         runId,
-        timestamp: new Date().toISOString(),
-        completedNodes: data.completedNodes || {},
+        timestamp: now,
+        startedAt: data.startedAt || now,
+        completedAt: data.completedAt || null,
+        duration: data.duration || null,
+        completedNodes,
         pendingNodes: data.pendingNodes || [],
         nodeOutputs: data.nodeOutputs || {},
         workflowInput: data.workflowInput || null,
-        executionContext: data.executionContext || {}
+        executionContext: data.executionContext || {},
+        summary: data.summary || null,
+        totalTokens: data.totalTokens || null
       };
       fs.writeFileSync(filePath, JSON.stringify(checkpoint, null, 2), 'utf-8');
       logger.info(`Checkpoint saved: ${workflowId}/${runId}`);
