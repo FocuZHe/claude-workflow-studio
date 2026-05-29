@@ -46,7 +46,7 @@ npm start      # or double-click start.bat
 |---------|-------------|
 | **Dual-Engine Execution** | SDK master agent + CLI sub-agents, real process isolation |
 | **Visual Workflows** | 8 node types (incl. condition branching), drag-and-drop editor, AI workflow generation |
-| **Workflow Templates** | 19 built-in templates: code review, bug fix, doc generation, security audit, etc. |
+| **Workflow Templates** | 22 built-in templates: code review, bug fix, doc generation, security audit, etc. |
 | **Skills Marketplace** | 249 real skills from Anthropic and ECC community |
 | **Real-time Streaming** | All sub-agent output streamed via WebSocket |
 | **Checkpoint/Resume** | Per-node checkpoints, resume from breakpoint after crash or pause |
