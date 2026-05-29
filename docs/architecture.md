@@ -171,7 +171,7 @@ WorkflowService.execute(workflowId, input, options)
 4. 分配工作区路径
 5. 生成唯一 runId
 6. 初始化节点状态（全部 pending）
-7. 归档旧记忆（`.bak` 备份，清空当前记忆）
+7. 记忆追加式写入（不归档，append-only + 自动压缩）
 
 **阶段二：拓扑排序**
 
@@ -241,7 +241,7 @@ while 工作流未完成:
 每个工作流节点执行完成后，立即写入检查点文件：
 
 ```
-workspace/<wsId>/WORKFLOWS/checkpoints/
+workspace/<wsId>/.checkpoint/
 ├── <runId>_<nodeIndex>.json    # 每个节点一个检查点文件
 └── <runId>_state.json          # 全局执行状态
 ```
@@ -262,7 +262,7 @@ workspace/<wsId>/WORKFLOWS/checkpoints/
 
 ```
 服务器启动
-  → 扫描 workspace/WORKFLOWS/checkpoints/
+  → 扫描 workspace/.checkpoint/
   → 发现未完成的 runId
   → 标记工作流状态为 interrupted
   → 前端显示「续传」按钮
@@ -396,7 +396,7 @@ CLI 子进程 stdout
 - 最多 10 次重试
 - 重连成功后自动触发 `ws:reconnected` 事件
 - 各页面组件监听该事件，重新加载最新数据
-- 心跳间隔：25 秒 ping
+- 心跳间隔：客户端 25 秒 ping，服务端 30 秒超时
 
 ---
 
@@ -408,7 +408,8 @@ CLI 子进程 stdout
 
 ```
 data/
-├── app.db                    # SQLite 主数据库（首次启动自动从 JSON 迁移）
+├── workflows.sqlite          # 工作流 SQLite 数据库
+├── prompt-templates.sqlite   # 提示词模板 SQLite 数据库
 ├── api-key.json              # API Key（AES-256-GCM 加密存储）
 ├── active-workspaces.json    # 已注册工作区列表
 ├── current-workspace.json    # 当前活跃工作区路径
@@ -418,7 +419,14 @@ data/
 ├── mcp/                      # MCP 工具配置
 └── chat-workspace/           # 对话隔离工作区
 
-workspace/<wsId>/WORKFLOWS/
+workspace/<wsId>/
+├── .checkpoint/              # 检查点文件（节点级）
+├── .context/                 # 工作流记忆
+│   ├── {workflow-id}.md
+│   └── shared/
+│       └── pool.json
+├── reports/                  # 执行报告
+└── WORKFLOWS/                # 工作流、技能等配置
 ├── workflows.json            # 工作流定义
 ├── knowledge.json            # 知识库数据
 ├── tags.json                 # 标签
@@ -428,7 +436,6 @@ workspace/<wsId>/WORKFLOWS/
 ├── skills.json               # 已安装技能
 ├── mcp-tools.json            # MCP 工具列表
 ├── execution-log.json        # 执行历史
-├── checkpoints/              # 检查点目录
 └── snapshots/                # 快照目录
 ```
 
@@ -670,7 +677,7 @@ Opus → Sonnet → Haiku
 | 参数 | 值 |
 |------|-----|
 | Web 服务器端口 | 3000 |
-| WebSocket 心跳 | 25 秒 |
+| WebSocket 心跳 | 客户端 25 秒 / 服务端 30 秒超时 |
 | 断线重连 | 最多 10 次，最长 30 秒间隔 |
 | Agent 执行超时 | 30 分钟 |
 | 子 Agent 内存上限 | 2GB RSS |
@@ -693,7 +700,7 @@ Opus → Sonnet → Haiku
 
 ## 十五、功能模块
 
-侧边栏分为 4 个分组，共 15 个页面：
+侧边栏分为 4 个分组，共 16 个页面：
 
 ### 核心
 
@@ -849,7 +856,9 @@ workspace/<wsId>/
 | 模块 | 端点 | 说明 |
 |------|------|------|
 | 智能体 | `/api/agents` | CRUD + 批量删除 |
+| 智能体模板 | `/api/agent-templates` | 预设角色模板 |
 | 工作流 | `/api/workflows` | CRUD + 执行 + 快照 + AI创建 + 导入/导出 + 批量克隆 |
+| 工作流模板 | `/api/workflow-templates` | 内置工作流模板 |
 | 任务 | `/api/tasks` | CRUD + 批量删除 |
 | 任务队列 | `/api/task-queues` | 批量任务队列管理 |
 | 文件 | `/api/files` | 浏览 + 读写 + 工作区切换 |
@@ -862,7 +871,16 @@ workspace/<wsId>/
 | 历史 | `/api/history` | 执行历史 + 批量删除 |
 | MCP | `/api/mcp-tools` | MCP 工具管理 |
 | 提示词 | `/api/prompt-templates` | 提示词模板 CRUD |
-| 鉴权 | `/api/auth/key` | 获取 API Key |
+| 工作区 | `/api/workspaces` | 工作区 CRUD + 切换 |
+| 广播 | `/api/broadcast` | 事件广播 |
+| 客户端 | `/api/clients` | 在线客户端管理 |
+| 审计日志 | `/api/audit-logs` | 操作审计查询 |
+| 告警 | `/api/alerts` | 告警管理 |
+| 安全 | `/api/safety` | 安全审计 |
+| 报告 | `/api/reports` | 执行报告 |
+| Git | `/api/git` | Git 操作 |
+| 资源 | `/api/resources` | 系统资源监控 |
+| API Key | `/api/keys` | API Key 管理 |
 | 健康 | `/api/health` | 服务状态 + CLI 兼容性 |
 
 ---
