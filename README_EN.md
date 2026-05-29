@@ -45,15 +45,19 @@ npm start      # or double-click start.bat
 | Feature | Description |
 |---------|-------------|
 | **Dual-Engine Execution** | SDK master agent + CLI sub-agents, real process isolation |
-| **Visual Workflows** | 7 node types, drag-and-drop editor, AI workflow generation |
+| **Visual Workflows** | 8 node types (incl. condition branching), drag-and-drop editor, AI workflow generation |
+| **Workflow Templates** | 19 built-in templates: code review, bug fix, doc generation, security audit, etc. |
 | **Skills Marketplace** | 249 real skills from Anthropic and ECC community |
 | **Real-time Streaming** | All sub-agent output streamed via WebSocket |
 | **Checkpoint/Resume** | Per-node checkpoints, resume from breakpoint after crash or pause |
 | **Memory System** | Task-tagged memory, keyword-filtered injection, `[记忆: xxx]` marker extraction |
 | **Workflow Interop** | Import/export Claude Code `.md` workflow files |
+| **Node-Level Logs** | Click node to view execution details: status, duration, token usage, output summary |
+| **Error Highlighting** | Failed nodes marked in red, real-time status updates (running/completed/failed) |
 | **Multi-Workspace** | Isolated runtime environments with independent data |
 | **Task Queues** | Batch execution with pause/resume/cancel |
 | **Knowledge Base** | Category/tag organization, full-text search, injectable into agents |
+| **Security** | API Key AES-256-GCM encryption, three-tier rate limiting, workspace sandbox, path traversal prevention |
 
 ### Workflow Nodes
 
@@ -101,6 +105,18 @@ npm start              # Start server
 npm run dev            # Dev mode (auto-restart)
 npm test               # Run tests
 ```
+
+### Batch Scripts (Windows)
+
+| Script | Description |
+|--------|-------------|
+| `install.bat` | One-click dependency install |
+| `start.bat` | Start service |
+| `stop.bat` | Stop service |
+| `restart.bat` | Restart service |
+| `logs.bat` | View logs |
+| `add-to-startup.bat` | Add to startup |
+| `remove-from-startup.bat` | Remove from startup |
 
 ---
 
