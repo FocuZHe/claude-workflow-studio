@@ -37,12 +37,13 @@ function errorHandler(err, req, res, _next) {
     method: req.method
   });
 
-  // Generic 500 error
+  // Generic 500 error - don't leak internal details to client
+  logger.error('Unhandled error:', { message: err.message, stack: err.stack });
   res.status(500).json({
     success: false,
     error: {
       code: 'INTERNAL_ERROR',
-      message: err.message || '发生未知错误'
+      message: '服务器内部错误，请稍后重试'
     }
   });
 }

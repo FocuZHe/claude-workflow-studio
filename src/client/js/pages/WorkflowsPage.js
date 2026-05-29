@@ -471,7 +471,7 @@ window.WorkflowsPage = (() => {
           <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
             <span style="font-size:11px;color:var(--text-muted);">工作文件夹:</span>
             <span id="wf-folder-path" style="font-size:11px;color:var(--text-secondary);font-family:var(--font-mono);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
-              ${currentWorkflow?.folderPath || '未设置'}
+              ${escapeHtml(currentWorkflow?.folderPath || '未设置')}
             </span>
             <button class="btn btn-sm btn-secondary" id="wf-select-folder">选择文件夹</button>
           </div>

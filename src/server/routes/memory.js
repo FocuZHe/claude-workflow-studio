@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const MemoryService = require('../services/MemoryService');
 const { AppError } = require('../middleware/errorHandler');
+const logger = require('../utils/logger');
 
 router.get('/list', (req, res, next) => {
   try {
@@ -80,7 +81,17 @@ router.get('/shared/pool', (req, res, next) => {
 
 router.put('/shared/pool', (req, res, next) => {
   try {
-    MemoryService.updateSharedPool(req.body);
+    const data = req.body;
+    // Validate structure: must be an object, not array/primitive
+    if (!data || typeof data !== 'object' || Array.isArray(data)) {
+      throw new AppError('VALIDATION_ERROR', 'Body must be a JSON object', 400);
+    }
+    // Limit body size to 100KB
+    const jsonSize = JSON.stringify(data).length;
+    if (jsonSize > 100 * 1024) {
+      throw new AppError('VALIDATION_ERROR', 'Body too large. Max 100KB.', 400);
+    }
+    MemoryService.updateSharedPool(data);
     res.json({ success: true, data: MemoryService.getSharedPool() });
   } catch (err) { next(err); }
 });
@@ -103,7 +114,8 @@ router.get('/:workflowId/runs', async (req, res) => {
     });
     res.json({ success: true, data: entries });
   } catch (e) {
-    res.status(500).json({ success: false, error: e.message });
+    logger.error('Failed to list memory runs:', e);
+    res.status(500).json({ success: false, error: '获取记忆列表失败' });
   }
 });
 

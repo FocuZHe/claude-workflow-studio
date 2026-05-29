@@ -49,13 +49,13 @@ window.AgentDetail = (() => {
           <div class="skill-cat-group" style="margin-bottom:8px;">
             <div class="skill-cat-label" style="font-size:11px;font-weight:600;color:var(--accent-cyan);margin-bottom:4px;cursor:pointer;user-select:none;"
               onclick="const items=this.nextElementSibling;items.style.display=items.style.display==='none'?'':'none'">
-              ▾ ${cat} (${cats[cat].length})
+              ▾ ${escapeHtml(cat)} (${cats[cat].length})
             </div>
             <div style="display:flex;flex-wrap:wrap;gap:4px;">
               ${cats[cat].map(s => `
                 <label class="skill-item" style="display:flex;align-items:center;gap:3px;cursor:pointer;font-size:11px;padding:2px 6px;border:1px solid var(--border-subtle);border-radius:3px;">
-                  <input type="checkbox" class="agent-skill-cb" value="${s.name.replace(/"/g,'&quot;')}" ${currentSkillNames.includes(s.name) ? 'checked' : ''}>
-                  <span>${s.name.replace(/"/g,'&quot;')}</span>
+                  <input type="checkbox" class="agent-skill-cb" value="${escapeHtml(s.name)}" ${currentSkillNames.includes(s.name) ? 'checked' : ''}>
+                  <span>${escapeHtml(s.name)}</span>
                 </label>
               `).join('')}
             </div>

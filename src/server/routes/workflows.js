@@ -467,8 +467,15 @@ router.post('/import', (req, res, next) => {
 router.post('/import-md', (req, res, next) => {
   try {
     const { content, name, workspaceId } = req.body;
-    if (!content) {
-      throw new AppError('VALIDATION_ERROR', 'content is required', 400);
+    if (!content || typeof content !== 'string') {
+      throw new AppError('VALIDATION_ERROR', 'content must be a non-empty string', 400);
+    }
+    // Limit import size to 500KB
+    if (content.length > 500 * 1024) {
+      throw new AppError('VALIDATION_ERROR', 'Content too large. Max 500KB.', 400);
+    }
+    if (name && typeof name === 'string' && name.length > 200) {
+      throw new AppError('VALIDATION_ERROR', 'Name too long. Max 200 chars.', 400);
     }
 
     const WorkflowInteropService = require('../services/WorkflowInteropService');
@@ -1547,7 +1554,8 @@ router.post('/approval/respond', (req, res) => {
     }
     res.json({ success: true, data: { handled } });
   } catch (err) {
-    res.status(500).json({ success: false, error: err.message });
+    logger.error('Approval decision error:', err);
+    res.status(500).json({ success: false, error: '审批处理失败' });
   }
 });
 

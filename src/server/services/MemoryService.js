@@ -19,8 +19,14 @@ class MemoryService {
   }
 
   static _getMemoryPath(workflowId) {
-    if (!workflowId) throw new Error('Invalid workflowId');
-    if (workflowId.includes('..')) throw new Error('Path traversal detected');
+    if (!workflowId || typeof workflowId !== 'string') throw new Error('Invalid workflowId');
+    if (workflowId.includes('..') || workflowId.includes('/') || workflowId.includes('\\')) {
+      throw new Error('Path traversal detected');
+    }
+    // Only allow alphanumeric, hyphens, underscores
+    if (!/^[a-zA-Z0-9_-]+$/.test(workflowId)) {
+      throw new Error('Invalid workflowId format');
+    }
     return path.join(MemoryService._baseDir, `${workflowId}.md`);
   }
 
@@ -76,9 +82,11 @@ class MemoryService {
   }
 
   static appendMemoryWithTag(workflowId, entry, tag = '') {
+    if (!workflowId || !entry) return false;
     let existing = MemoryService.getMemory(workflowId);
     const timestamp = new Date().toISOString();
-    const tagLabel = tag ? ` | ${tag}` : '';
+    // Truncate tag to 50 chars to prevent header bloat
+    const tagLabel = tag ? ` | ${String(tag).substring(0, 50).replace(/\n/g, ' ')}` : '';
 
     // Deduplication
     if (existing && MemoryService._isDuplicate(existing, entry)) {

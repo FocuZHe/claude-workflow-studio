@@ -181,7 +181,7 @@ window.DashboardPage = (() => {
       if (actEl && activities.length > 0) {
         actEl.innerHTML = activities.slice(0, 8).map(a => `
           <div style="display:flex;justify-content:space-between;align-items:baseline;padding:6px 0;border-bottom:1px solid var(--border-subtle);font-size:13px;">
-            <span style="color:var(--text-secondary);">${a.text}</span>
+            <span style="color:var(--text-secondary);">${escapeHtml(a.text)}</span>
             <span style="color:var(--text-muted);font-size:11px;font-family:var(--font-mono);white-space:nowrap;margin-left:8px;">${a.time ? new Date(a.time).toLocaleString() : ''}</span>
           </div>
         `).join('');
@@ -228,7 +228,7 @@ window.DashboardPage = (() => {
         } else {
           agentList.innerHTML = agents.map(a => `
             <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border-subtle);font-size:12px;">
-              <span style="font-family:var(--font-mono);">${a.name || a.pid || '--'}</span>
+              <span style="font-family:var(--font-mono);">${escapeHtml(a.name || a.pid || '--')}</span>
               <span style="color:var(--text-muted);">PID: ${a.pid || '--'}</span>
             </div>
           `).join('');
