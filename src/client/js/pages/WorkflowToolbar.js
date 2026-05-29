@@ -68,6 +68,12 @@ window.WorkflowToolbar = (() => {
 
         <div class="toolbar-separator"></div>
         <div class="toolbar-group">
+          <button class="btn btn-sm btn-secondary" id="wf-import-md-btn" title="导入 .md 工作流">📥 导入 .md</button>
+          <button class="btn btn-sm btn-secondary" id="wf-export-md-btn" title="导出为 .md 文件">📤 导出 .md</button>
+        </div>
+
+        <div class="toolbar-separator"></div>
+        <div class="toolbar-group">
           <button class="btn btn-sm btn-secondary" id="wf-memory-settings" title="记忆传递设置">记忆</button>
           <button class="btn btn-sm btn-secondary" id="wf-knowledge-settings" title="知识库注入设置">知识</button>
           <button class="btn btn-sm btn-secondary" id="canvas-snapshot-btn" title="保存快照">快照</button>
@@ -97,6 +103,58 @@ window.WorkflowToolbar = (() => {
     document.getElementById('wf-zoom-reset')?.addEventListener('click', () => callbacks.onZoomReset?.());
     document.getElementById('wf-memory-settings')?.addEventListener('click', () => callbacks.onMemorySettings?.());
     document.getElementById('wf-knowledge-settings')?.addEventListener('click', () => callbacks.onKnowledgeSettings?.());
+
+    // Import .md workflow
+    document.getElementById('wf-import-md-btn')?.addEventListener('click', () => {
+      const input = document.createElement('input');
+      input.type = 'file';
+      input.accept = '.md,.markdown';
+      input.onchange = async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        const content = await file.text();
+        try {
+          const store = window.Store || {};
+          const res = await API.importWorkflowMd(content, null, store.get?.('currentWorkspaceId'));
+          if (res.success) {
+            Toast.success('工作流导入成功');
+            if (res.data?.id) {
+              window.location.hash = `#/workflows/${res.data.id}/edit`;
+            }
+          }
+        } catch (err) {
+          Toast.error('导入失败: ' + (err.message || '未知错误'));
+        }
+      };
+      input.click();
+    });
+
+    // Export .md workflow
+    document.getElementById('wf-export-md-btn')?.addEventListener('click', async () => {
+      if (!callbacks.onGetCurrentWorkflowId) return;
+      const wfId = callbacks.onGetCurrentWorkflowId();
+      if (!wfId) {
+        Toast.warning('请先保存工作流');
+        return;
+      }
+      try {
+        const url = API.getWorkflowExportMdUrl(wfId);
+        const key = localStorage.getItem('claude_console_api_key') || '';
+        const res = await fetch(url, { headers: { 'X-API-Key': key } });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const blob = await res.blob();
+        const blobUrl = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = blobUrl;
+        const wfName = callbacks.onGetCurrentWorkflowName?.() || 'workflow';
+        a.download = `${wfName}.md`;
+        a.click();
+        URL.revokeObjectURL(blobUrl);
+        Toast.success('工作流已导出');
+      } catch (err) {
+        Toast.error('导出失败: ' + (err.message || '未知错误'));
+      }
+    });
   }
 
   function autoLayout() {

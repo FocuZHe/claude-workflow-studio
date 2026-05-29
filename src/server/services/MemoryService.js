@@ -75,6 +75,84 @@ class MemoryService {
     return MemoryService.updateMemory(workflowId, content);
   }
 
+  static appendMemoryWithTag(workflowId, entry, tag = '') {
+    let existing = MemoryService.getMemory(workflowId);
+    const timestamp = new Date().toISOString();
+    const tagLabel = tag ? ` | ${tag}` : '';
+
+    // Deduplication
+    if (existing && MemoryService._isDuplicate(existing, entry)) {
+      return true;
+    }
+
+    const newEntry = `\n\n## Session ${timestamp}${tagLabel}\n\n${entry}\n`;
+    let content = existing + newEntry;
+
+    // Compress if over 15000 chars
+    if (content.length > 15000) {
+      content = MemoryService._compressMemory(content);
+    }
+
+    return MemoryService.updateMemory(workflowId, content);
+  }
+
+  static extractAgentMemory(output) {
+    if (!output) return [];
+    const str = String(output);
+    const memories = [];
+    // Match [记忆: ...] or [Memory: ...] patterns
+    const regex = /\[(记忆|Memory)\s*[:：]\s*([^\]]+)\]/gi;
+    let match;
+    while ((match = regex.exec(str)) !== null) {
+      memories.push(match[2].trim());
+    }
+    return memories;
+  }
+
+  static injectMemoryFiltered(workflowId, taskInput) {
+    const memory = MemoryService.getMemory(workflowId);
+    if (!memory || memory.trim().length === 0) return '';
+
+    // If no task input, inject all (up to limit)
+    if (!taskInput || taskInput.trim().length === 0) {
+      return `\n\n[Workflow Memory - Previous Sessions]\n${memory.substring(0, 10000)}\n`;
+    }
+
+    // Extract keywords from task input
+    // Chinese: extract 2-char bigrams, filter out common suffixes
+    // English: extract 3+ char words
+    const commonSuffixes = new Set(['笔记', '任务', '工作', '处理', '生成', '编写', '创建', '整理', '分析', '检查', '修复', '运行', '执行', '测试']);
+    const chinese = taskInput.match(/[一-鿿]+/g) || [];
+    const english = taskInput.match(/[a-zA-Z]{3,}/g) || [];
+    const keywords = [...english];
+    for (const seg of chinese) {
+      for (let i = 0; i < seg.length - 1; i++) {
+        const bigram = seg.substring(i, i + 2);
+        if (!commonSuffixes.has(bigram)) {
+          keywords.push(bigram);
+        }
+      }
+    }
+    if (keywords.length === 0) {
+      return `\n\n[Workflow Memory - Previous Sessions]\n${memory.substring(0, 10000)}\n`;
+    }
+
+    // Split into sessions and filter by keyword match
+    const sections = memory.split(/(?=## Session )/).filter(s => s.trim());
+    const matched = sections.filter(section => {
+      const sectionLower = section.toLowerCase();
+      return keywords.some(kw => sectionLower.includes(kw.toLowerCase()));
+    });
+
+    if (matched.length === 0) {
+      // No matching memory, inject nothing
+      return '';
+    }
+
+    const filtered = matched.join('\n');
+    return `\n\n[Workflow Memory - Previous Sessions]\n${filtered.substring(0, 10000)}\n`;
+  }
+
   /**
    * Check if a new entry is substantially duplicate of the last session
    */
@@ -112,8 +190,9 @@ class MemoryService {
 
     const compressedOld = old.map(s => {
       const lines = s.split('\n');
-      const header = lines.find(l => l.startsWith('## Session')) || '';
-      return header;
+      // Preserve the full header line including any | tag part
+      const headerMatch = s.match(/^## Session\s+[^\n]*/);
+      return headerMatch ? headerMatch[0] : '';
     }).filter(Boolean).join('\n');
 
     return compressedOld + '\n\n' + recent;
@@ -237,20 +316,12 @@ class MemoryService {
   }
 
   /**
-   * Archive current memory before a new execution (rename to .bak)
+   * Archive is disabled — memory is now append-only with task tags.
+   * This method is a no-op to prevent destructive memory loss.
    */
   static archiveMemory(workflowId) {
-    try {
-      const filePath = MemoryService._getMemoryPath(workflowId);
-      if (!fs.existsSync(filePath)) return false;
-      const content = fs.readFileSync(filePath, 'utf-8');
-      if (!content.trim()) return false;
-      const bakPath = filePath + '.bak';
-      fs.writeFileSync(bakPath, content, 'utf-8');
-      // Clear current memory (new execution starts fresh, but archive is preserved)
-      fs.writeFileSync(filePath, '', 'utf-8');
-      return true;
-    } catch (e) { return false; }
+    // No-op: memory is append-only, no archiving needed
+    return true;
   }
 
   // Backward compatibility: old agent+workflow scoped methods redirect to workflow-only

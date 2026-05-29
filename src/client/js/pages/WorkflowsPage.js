@@ -531,6 +531,8 @@ window.WorkflowsPage = (() => {
       onZoomReset: () => WorkflowCanvas.zoomReset(),
       onMemorySettings: () => openMemorySettings(currentWorkflow),
       onKnowledgeSettings: () => openKnowledgeSettings(currentWorkflow),
+      onGetCurrentWorkflowId: () => currentWorkflow?.id || null,
+      onGetCurrentWorkflowName: () => currentWorkflow?.name || 'workflow',
     });
   }
 

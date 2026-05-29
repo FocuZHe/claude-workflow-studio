@@ -135,7 +135,7 @@ class MasterAgentService {
     // 1. 工作流记忆
     try {
       const MemoryService = require('./MemoryService');
-      const memCtx = MemoryService.injectMemory(workflow.id);
+      const memCtx = MemoryService.injectMemoryFiltered(workflow.id, userInput);
       if (memCtx) injections.push(memCtx);
 
       // 跨工作流记忆

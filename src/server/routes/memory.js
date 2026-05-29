@@ -85,6 +85,28 @@ router.put('/shared/pool', (req, res, next) => {
   } catch (err) { next(err); }
 });
 
+// GET /api/memory/:workflowId/runs - List memory entries with tags
+router.get('/:workflowId/runs', async (req, res) => {
+  try {
+    const memory = MemoryService.getMemory(req.params.workflowId);
+    if (!memory || !memory.trim()) {
+      return res.json({ success: true, data: [] });
+    }
+    const sections = memory.split(/(?=## Session )/).filter(s => s.trim());
+    const entries = sections.map(s => {
+      const headerMatch = s.match(/^## Session\s+(\S+)(.*)?\n/);
+      return {
+        timestamp: headerMatch ? headerMatch[1] : '',
+        tag: headerMatch && headerMatch[2] ? headerMatch[2].replace(/^\s*\|\s*/, '').trim() : '',
+        content: s.replace(/^## Session[^\n]*\n/, '').trim()
+      };
+    });
+    res.json({ success: true, data: entries });
+  } catch (e) {
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
 router.get('/:workflowId', (req, res, next) => {
   try {
     const content = MemoryService.getMemory(req.params.workflowId);

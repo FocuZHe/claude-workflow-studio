@@ -350,11 +350,7 @@ class WorkflowService {
       WorkflowModel.updateNodeStatus(id, node.id, 'pending');
     }
 
-    // Archive old memory before new execution (preserves .bak, starts fresh)
-    try {
-      const MemoryService = require('./MemoryService');
-      MemoryService.archiveMemory(id);
-    } catch (e) { /* best-effort */ }
+    // Memory is now append-only with task tags, no archiving needed
 
     logger.info(`Workflow execution started: ${id}`, { runId });
 
@@ -488,11 +484,29 @@ class WorkflowService {
       const fileListMatch = output.match(/\[文件清单\][\s\S]*?(?=\[|$)/);
       const summary = fileListMatch ? fileListMatch[0].trim().substring(0, 500) : output.slice(-500).trim();
 
-      // Save memory
+      // Save memory with task tag and agent memory extraction
       try {
         const MemoryService = require('./MemoryService');
-        MemoryService.saveMemory(workflowId, { output: output.substring(0, 5000), timestamp: new Date() });
-      } catch (_) {}
+
+        // Extract summary from output
+        const memSummary = MemoryService.extractSummary(output);
+
+        // Extract agent markers [记忆: xxx]
+        const agentMemories = MemoryService.extractAgentMemory(output);
+
+        // Combine summary with agent memories
+        let memoryEntry = memSummary;
+        if (agentMemories.length > 0) {
+          memoryEntry += '\n\nAgent 主动记忆:\n' + agentMemories.map(m => `- ${m}`).join('\n');
+        }
+
+        // Use task input as tag (first 50 chars)
+        const tag = (input || '').substring(0, 50).replace(/\n/g, ' ').trim();
+
+        MemoryService.appendMemoryWithTag(workflowId, memoryEntry, tag);
+      } catch (e) {
+        logger.warn(`Failed to save memory: ${e.message}`);
+      }
 
       WorkflowService._broadcastStatusUpdate(workflowId, 'completed', runId, summary);
       logger.info(`MasterAgent workflow completed: ${workflowId}`, { runId });

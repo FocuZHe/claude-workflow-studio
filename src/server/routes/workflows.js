@@ -458,6 +458,52 @@ router.post('/import', (req, res, next) => {
   } catch (err) { next(err); }
 });
 
+// ---- Import/Export .md (Claude Code Workflows) ----
+
+/**
+ * POST /api/workflows/import-md - Import a Claude Code .md workflow
+ * body: { content: string, name?: string, workspaceId?: string }
+ */
+router.post('/import-md', (req, res, next) => {
+  try {
+    const { content, name, workspaceId } = req.body;
+    if (!content) {
+      throw new AppError('VALIDATION_ERROR', 'content is required', 400);
+    }
+
+    const WorkflowInteropService = require('../services/WorkflowInteropService');
+    const parsed = WorkflowInteropService.parseMarkdown(content);
+    const dag = WorkflowInteropService.toWorkflowDag(parsed);
+
+    const workflowName = name || parsed.description || '导入的工作流';
+
+    // Determine workspaceId
+    let wsId = workspaceId || null;
+    if (!wsId) {
+      try {
+        const WorkspaceManager = require('../services/WorkspaceManager');
+        const active = WorkspaceManager.getActive();
+        const currentWorkspaceRoot = FileService.runtimeWorkspaceRoot;
+        const currentWs = active.find(ws => ws.path === currentWorkspaceRoot);
+        if (currentWs) wsId = currentWs.id;
+      } catch (e) { /* fallback to null */ }
+    }
+
+    const workflow = WorkflowModel.create({
+      name: workflowName,
+      description: parsed.description,
+      workspaceId: wsId,
+      nodes: dag.nodes,
+      edges: dag.edges
+    });
+
+    saveWorkspaceState();
+    res.status(201).json({ success: true, data: workflow, parsed });
+  } catch (err) {
+    next(err);
+  }
+});
+
 // ---- Timeline & Natural Language routes ----
 
 /**
@@ -1119,6 +1165,27 @@ router.get('/:id/checkpoints', (req, res, next) => {
     const checkpoints = CheckpointService.listCheckpoints(req.params.id);
     res.json({ success: true, data: checkpoints });
   } catch (err) { next(err); }
+});
+
+/**
+ * GET /api/workflows/:id/export-md - Export workflow as Claude Code .md format
+ */
+router.get('/:id/export-md', (req, res, next) => {
+  try {
+    const workflow = WorkflowModel.findById(req.params.id);
+    if (!workflow) {
+      throw new AppError('NOT_FOUND', `Workflow with id '${req.params.id}' not found`, 404);
+    }
+
+    const WorkflowInteropService = require('../services/WorkflowInteropService');
+    const md = WorkflowInteropService.toMarkdown(workflow);
+
+    res.setHeader('Content-Type', 'text/markdown; charset=utf-8');
+    res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(workflow.name || 'workflow')}.md"`);
+    res.send(md);
+  } catch (err) {
+    next(err);
+  }
 });
 
 /**

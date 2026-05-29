@@ -374,6 +374,10 @@ window.API = (() => {
     // NL Creation
     createWorkflowFromText: (description) => post('/workflows/create-from-text', { description }),
 
+    // Claude Code .md Workflow Interop
+    importWorkflowMd: (content, name, workspaceId) => post('/workflows/import-md', { content, name, workspaceId }),
+    getWorkflowExportMdUrl: (id) => `/api/workflows/${id}/export-md`,
+
     // Batch Clone
     batchCloneWorkflows: (workflowIds, targetWorkspaceIds) => post('/workflows/batch-clone', { workflowIds, targetWorkspaceIds }),
 

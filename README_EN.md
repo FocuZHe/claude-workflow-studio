@@ -99,7 +99,8 @@ npm test         # Run backend tests
 - **Multi-workspace support**: Isolated environments with independent data, workflows, and configurations
 - **Task queues**: Batch execution with pause/resume/cancel, sequential processing
 - **Knowledge base**: Organized by categories and tags, full-text search, injectable into agent execution
-- **Memory system**: Per-workflow memory accumulation, cross-workflow transfer, shared data pool, auto-compression
+- **Memory system**: Task-tagged memory, keyword-filtered injection, `[记忆: xxx]` marker extraction, cross-workflow transfer, shared data pool, auto-compression
+- **Claude Code Workflows interop**: Import `.md` workflow files into visual editor, export visual workflows as `.md` format
 - **Audit logs**: Full operation auditing, real-time persistence, last 1000 entries retained
 - **Security**: Workspace sandbox, path traversal prevention, three-tier rate limiting, memory sandbox (2GB RSS limit)
 
