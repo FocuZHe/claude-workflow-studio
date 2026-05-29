@@ -198,6 +198,36 @@ class MasterAgentService {
     // 统计可执行步骤数
     const executableCount = steps.filter(s => !s.includes('[已完成 - 跳过]')).length;
 
+    // ── 提示词预算控制 ──
+    // 确保总提示词不会超出模型上下文窗口
+    const PROMPT_BUDGET = 80000; // 80K 字符（约 40K tokens，留足空间给对话历史）
+    const basePromptSize = 3000; // 预估基础指令大小
+    const stepsSize = steps.join('\n\n').length;
+    const availableForInjections = PROMPT_BUDGET - basePromptSize - stepsSize;
+
+    let finalInjectionBlock = '';
+    if (injectionBlock.length > 0) {
+      if (injectionBlock.length <= availableForInjections) {
+        // 预算充足，全部注入
+        finalInjectionBlock = injectionBlock;
+      } else {
+        // 预算不足，按优先级压缩
+        // 优先级：记忆 > 知识 > 技能/MCP（记忆对执行最相关）
+        const compressedInjections = [];
+        let remaining = availableForInjections;
+
+        for (const injection of injections) {
+          if (remaining <= 0) break;
+          const truncated = injection.substring(0, remaining);
+          compressedInjections.push(truncated);
+          remaining -= truncated.length;
+        }
+
+        finalInjectionBlock = '\n=== 可用上下文 ===\n' + compressedInjections.join('\n\n') + '\n';
+        logger.warn(`Prompt budget exceeded, truncated injections: ${injectionBlock.length} -> ${finalInjectionBlock.length} chars`);
+      }
+    }
+
     return `你是一个工作流执行引擎。你的唯一职责是按以下精确顺序执行任务，绝不做其他事。
 
 工作目录: ${workingDir}
@@ -221,7 +251,7 @@ ${userInput}${startInstruction}
 
 === 执行步骤 ===
 ${steps.join('\n\n')}
-${injectionBlock}
+${finalInjectionBlock}
 === 执行规范 ===
 1. 每个 agent 步骤: 调用 Agent 工具。参数: description="<节点名称>", prompt="<该步骤的任务描述>", model="<指定模型>"
 2. 每个步骤完成后: 用 write_to_file 保存输出到 .checkpoint/<步骤描述>.output.md

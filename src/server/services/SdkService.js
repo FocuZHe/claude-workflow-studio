@@ -241,11 +241,13 @@ class SdkService {
             toolResults.push(toolResult);
 
             // Save checkpoint immediately after each named Agent call completes
+            // Use node ID from tool name (Agent_n2 -> n2) instead of sequential index
+            // to avoid misalignment if model skips or reorders tool calls
             if (block.name.startsWith('Agent_') && this._checkpointCallback) {
-              const node = this._executableNodes[this._agentCallIndex];
-              if (node) {
-                this._checkpointCallback(node.id, node.label, toolResult.content || '');
-                this._agentCallIndex++;
+              const nodeId = block.name.substring(6); // Extract node ID from "Agent_nX"
+              const nodeInfo = this._nodeRegistry[nodeId];
+              if (nodeInfo) {
+                this._checkpointCallback(nodeId, nodeInfo.label || nodeId, toolResult.content || '');
               }
             }
           }
