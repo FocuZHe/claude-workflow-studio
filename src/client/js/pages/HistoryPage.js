@@ -153,7 +153,7 @@ window.HistoryPage = (() => {
 
       bindLoadMoreButton('load-more-history', () => loadHistory(_currentPage + 1));
     } catch (e) {
-      listEl.innerHTML = `<div style="text-align:center;padding:40px;color:var(--accent-red);font-size:13px;">加载失败: ${e.message}</div>`;
+      listEl.innerHTML = `<div style="text-align:center;padding:40px;color:var(--accent-red);font-size:13px;">加载失败: ${escapeHtml(e.message)}</div>`;
     } finally {
       _loadingMore = false;
     }

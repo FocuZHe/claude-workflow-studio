@@ -390,12 +390,12 @@ window.SettingsPage = (() => {
         try {
           const res = await API.testApiConfig(existing.id);
           if (res.data?.valid) {
-            resultEl.innerHTML = `<span style="color:var(--accent-green);">✓ 连接成功 (${res.data.latencyMs}ms, ${res.data.modelUsed})</span>`;
+            resultEl.innerHTML = `<span style="color:var(--accent-green);">✓ 连接成功 (${escapeHtml(String(res.data.latencyMs))}ms, ${escapeHtml(res.data.modelUsed)})</span>`;
           } else {
-            resultEl.innerHTML = `<span style="color:var(--accent-red);">✗ ${res.data?.error || '失败'}</span>`;
+            resultEl.innerHTML = `<span style="color:var(--accent-red);">✗ ${escapeHtml(res.data?.error || '失败')}</span>`;
           }
         } catch (e) {
-          resultEl.innerHTML = `<span style="color:var(--accent-red);">✗ ${e.message}</span>`;
+          resultEl.innerHTML = `<span style="color:var(--accent-red);">✗ ${escapeHtml(e.message)}</span>`;
         }
         btn.disabled = false; btn.textContent = '测试连接';
       });

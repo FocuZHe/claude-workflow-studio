@@ -168,9 +168,12 @@ class MemoryService {
 
       if (!lastContent || !newContent) return false;
 
-      // Simple similarity: check if 70%+ of lines overlap
-      const lastLines = new Set(lastContent.split('\n').map(l => l.trim()).filter(l => l.length > 10));
-      const newLines = newContent.split('\n').map(l => l.trim()).filter(l => l.length > 10);
+      // Fast path: exact match
+      if (lastContent === newContent) return true;
+
+      // Line-based similarity: check if 70%+ of lines overlap
+      const lastLines = new Set(lastContent.split('\n').map(l => l.trim()).filter(l => l.length > 0));
+      const newLines = newContent.split('\n').map(l => l.trim()).filter(l => l.length > 0);
       if (lastLines.size === 0 || newLines.length === 0) return false;
 
       let overlap = 0;

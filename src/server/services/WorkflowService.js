@@ -361,7 +361,18 @@ class WorkflowService {
     logger.info(`Workflow ${id}: using MasterAgent mode (native Agent tool collaboration)`);
     WorkflowService._executeMasterAgent(id, runId, input, workflow).catch(err => {
       logger.error(`MasterAgent execution error: ${id}`, { runId, error: err.message });
-      try { WorkflowService._failWorkflow(id, runId, err.message); } catch (_) {}
+      try {
+        WorkflowService._failWorkflow(id, runId, err.message);
+      } catch (failErr) {
+        // Last resort: directly update workflow status to prevent stuck "running" state
+        logger.error(`Failed to mark workflow as failed: ${id}`, { error: failErr.message });
+        try {
+          const WorkflowModel = require('../models/Workflow');
+          WorkflowModel.update(id, { status: 'failed', executionStatus: 'failed', error: err.message });
+        } catch (_) {
+          logger.error(`CRITICAL: Cannot update workflow status for ${id}.workflow may be stuck.`);
+        }
+      }
     });
 
     return { runId, status: 'running' };

@@ -200,6 +200,11 @@ router.post('/write', (req, res, next) => {
     if (content === undefined || content === null) {
       throw new AppError('VALIDATION_ERROR', 'content is required', 400);
     }
+    // Limit file write size to 10MB
+    const MAX_WRITE_SIZE = 10 * 1024 * 1024;
+    if (typeof content === 'string' && content.length > MAX_WRITE_SIZE) {
+      throw new AppError('VALIDATION_ERROR', `Content too large (${Math.round(content.length / 1024 / 1024)}MB). Max 10MB.`, 400);
+    }
     const data = FileService.writeFile(filePath, content);
     res.json({ success: true, data });
   } catch (err) {
