@@ -115,8 +115,13 @@ function createApp() {
   app.use(detectThreats());
   app.use(authMiddleware);
 
-  // ---- Auth Key Endpoint (skipped by auth middleware) ----
+  // ---- Auth Key Endpoint (localhost only, skipped by auth middleware) ----
   app.get('/api/auth/key', (req, res) => {
+    const clientIp = req.ip || req.connection.remoteAddress || '';
+    const isLocal = clientIp === '127.0.0.1' || clientIp === '::1' || clientIp === '::ffff:127.0.0.1' || clientIp.includes('localhost');
+    if (!isLocal) {
+      return res.status(403).json({ success: false, error: '此接口仅允许本地访问' });
+    }
     res.json({ success: true, apiKey: getApiKey() });
   });
 

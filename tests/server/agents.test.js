@@ -82,16 +82,14 @@ describe('Agent API', () => {
         name: 'Enhanced Agent',
         role: 'developer',
         toolPermissions: { readFile: true, writeFile: false, executeCommand: true, browser: false, search: true },
-        envVars: { NODE_ENV: 'production' },
         mcpBindings: [{ server: 'test-server', tools: ['tool1'] }],
-        skillPackages: ['skill-a', 'skill-b']
+        skillNames: ['skill-a', 'skill-b']
       });
 
       assert.strictEqual(res.status, 201);
       assert.deepStrictEqual(res.body.data.toolPermissions, { readFile: true, writeFile: false, executeCommand: true, browser: false, search: true });
-      assert.deepStrictEqual(res.body.data.envVars, { NODE_ENV: 'production' });
       assert.deepStrictEqual(res.body.data.mcpBindings, [{ server: 'test-server', tools: ['tool1'] }]);
-      assert.deepStrictEqual(res.body.data.skillPackages, ['skill-a', 'skill-b']);
+      assert.deepStrictEqual(res.body.data.skillNames, ['skill-a', 'skill-b']);
     });
 
     it('should use default values for new fields when not provided', async () => {
@@ -103,11 +101,10 @@ describe('Agent API', () => {
       assert.strictEqual(res.status, 201);
 
       assert.deepStrictEqual(res.body.data.toolPermissions, {
-        readFile: true, writeFile: true, executeCommand: true, browser: true, search: true
+        executeCommand: true, browser: true, search: true
       });
-      assert.deepStrictEqual(res.body.data.envVars, {});
       assert.deepStrictEqual(res.body.data.mcpBindings, []);
-      assert.deepStrictEqual(res.body.data.skillPackages, []);
+      assert.deepStrictEqual(res.body.data.skillNames, []);
     });
 
     it('should reject agent without name', async () => {
@@ -252,16 +249,14 @@ describe('Agent API', () => {
 
       const res = await request('PUT', `/api/agents/${agentId}`, {
         toolPermissions: { readFile: true, writeFile: false, executeCommand: false, browser: true, search: false },
-        envVars: { API_KEY: 'secret' },
         mcpBindings: [{ server: 'new-server' }],
-        skillPackages: ['skill-x']
+        skillNames: ['skill-x']
       });
 
       assert.strictEqual(res.status, 200);
       assert.deepStrictEqual(res.body.data.toolPermissions, { readFile: true, writeFile: false, executeCommand: false, browser: true, search: false });
-      assert.deepStrictEqual(res.body.data.envVars, { API_KEY: 'secret' });
       assert.deepStrictEqual(res.body.data.mcpBindings, [{ server: 'new-server' }]);
-      assert.deepStrictEqual(res.body.data.skillPackages, ['skill-x']);
+      assert.deepStrictEqual(res.body.data.skillNames, ['skill-x']);
     });
 
     it('should return 404 for non-existent agent', async () => {

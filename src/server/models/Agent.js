@@ -118,6 +118,7 @@ class AgentModel {
     }
     if (data.toolPermissions !== undefined) agent.toolPermissions = data.toolPermissions;
     if (data.mcpBindings !== undefined) agent.mcpBindings = data.mcpBindings;
+    if (data.skillNames !== undefined) agent.skillNames = data.skillNames;
     if (data.skillPackages !== undefined) agent.skillPackages = data.skillPackages;
     agent.updatedAt = new Date();
     this._persist();
