@@ -90,11 +90,19 @@ class SdkService {
     const model = clientConfig.model || modelAlias;
 
     // Build Anthropic client (all providers use Anthropic Messages API format)
+    // Temporarily clear ANTHROPIC_AUTH_TOKEN to prevent SDK from using env var instead of configured key
+    const savedAuthToken = process.env.ANTHROPIC_AUTH_TOKEN;
+    delete process.env.ANTHROPIC_AUTH_TOKEN;
+    delete process.env.ANTHROPIC_API_KEY;
+
     const clientOpts = { apiKey: clientConfig.apiKey };
     if (clientConfig.baseUrl) {
       clientOpts.baseURL = clientConfig.baseUrl.replace(/\/+$/, '');
     }
     const client = new Anthropic(clientOpts);
+
+    // Restore env vars after client creation
+    if (savedAuthToken) process.env.ANTHROPIC_AUTH_TOKEN = savedAuthToken;
 
     logger.info(`SDK: Anthropic client, model=${model}, provider=${clientConfig.provider}${clientConfig.baseUrl ? ', baseURL=' + clientConfig.baseUrl : ''}`);
 
@@ -576,7 +584,11 @@ ${task}`;
 
     // CLI not available → fallback to SDK sub-agent
     logger.warn(`CLI not available for sub-agent ${nodeInfo.label}, using SDK fallback`);
+    const savedAuthToken2 = process.env.ANTHROPIC_AUTH_TOKEN;
+    delete process.env.ANTHROPIC_AUTH_TOKEN;
+    delete process.env.ANTHROPIC_API_KEY;
     const client = new Anthropic(ApiKeyService.getClientConfig());
+    if (savedAuthToken2) process.env.ANTHROPIC_AUTH_TOKEN = savedAuthToken2;
     return this._runSubAgent(client, callId, nodeInfo.label, task, model, workingDir, 1);
   }
 
