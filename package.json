@@ -1,0 +1,55 @@
+{
+  "name": "claude-workflow-studio",
+  "version": "1.2.0",
+  "description": "Claude Workflow Studio - Multi-Agent Orchestration Platform",
+  "main": "dist/server/app.js",
+  "bin": {
+    "multi-agent-platform": "./bin/cli.js"
+  },
+  "scripts": {
+    "start": "node bin/cli.js",
+    "dev": "node --watch-path=src --watch-path=tests bin/cli.js",
+    "build": "tsc",
+    "build:watch": "tsc --watch",
+    "build:frontend": "tsc -p tsconfig.frontend.json --outDir dist/client-tmp && node scripts/copy-frontend.js",
+    "check:frontend": "tsc -p tsconfig.frontend.json --noEmit",
+    "test": "node --require ./tests/setup.js --test --test-timeout=10000 --test-force-exit tests/server/*.test.js",
+    "test:verbose": "node --require ./tests/setup.js --test --test-timeout=10000 --test-force-exit --test-reporter=spec tests/server/*.test.js",
+    "test:integration": "node --require ./tests/setup.js --test --test-timeout=30000 tests/server/integration.test.js",
+    "test:frontend": "jest --config jest.frontend.config.js"
+  },
+  "dependencies": {
+    "@anthropic-ai/claude-agent-sdk": "^0.3.159",
+    "@anthropic-ai/claude-code": "^2.1.158",
+    "@anthropic-ai/sdk": "^0.100.1",
+    "@xterm/addon-fit": "^0.11.0",
+    "@xterm/xterm": "^6.0.0",
+    "cors": "^2.8.5",
+    "express": "^4.21.0",
+    "morgan": "^1.10.0",
+    "node-pty": "^1.1.0",
+    "p-limit": "^3.1.0",
+    "pm2": "^5.4.0",
+    "sql.js": "^1.14.1",
+    "uuid": "^10.0.0",
+    "ws": "^8.18.0"
+  },
+  "keywords": [
+    "multi-agent",
+    "collaboration",
+    "management"
+  ],
+  "license": "MIT",
+  "devDependencies": {
+    "@jest/globals": "^30.4.1",
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.6",
+    "@types/morgan": "^1.9.10",
+    "@types/node": "^25.9.1",
+    "@types/ws": "^8.18.1",
+    "jest": "^30.4.2",
+    "jest-environment-jsdom": "^30.4.1",
+    "tsx": "^4.22.4",
+    "typescript": "^6.0.3"
+  }
+}

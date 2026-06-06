@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Claude Workflow Studio</title>
+
+  <!-- CSS -->
+  <link rel="preload" href="icons.svg" as="image" type="image/svg+xml">
+  <link rel="stylesheet" href="css/variables.css?v=20260524">
+  <link rel="stylesheet" href="css/main.css?v=20260524">
+  <link rel="stylesheet" href="css/layout.css?v=20260524">
+  <link rel="stylesheet" href="css/components.css?v=20260524">
+  <link rel="stylesheet" href="css/animations.css?v=20260524">
+  <link rel="stylesheet" href="/xterm/xterm/css/xterm.css">
+</head>
+<body>
+  <!-- App Shell -->
+  <div id="app">
+    <nav class="navbar" id="navbar"></nav>
+    <aside class="sidebar" id="sidebar"></aside>
+    <main class="main-content" id="content">
+      <div class="page-enter" style="display:flex;align-items:center;justify-content:center;height:100%;">
+        <div class="spinner" style="width:32px;height:32px;"></div>
+      </div>
+    </main>
+  </div>
+
+  <!-- JS Core -->
+  <script src="js/router.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/ws.js"></script>
+  <script src="js/cache.js"></script>
+  <script src="js/store.js"></script>
+
+  <!-- Utilities -->
+  <script src="js/utils.js"></script>
+
+  <!-- xterm.js (UMD) -->
+  <script src="/xterm/xterm/lib/xterm.js"></script>
+  <script src="/xterm/addon-fit/lib/addon-fit.js"></script>
+  <script>
+    // xterm.js UMD exports onto globalThis, ensure window access
+    if (!window.Terminal && globalThis.Terminal) window.Terminal = globalThis.Terminal;
+    if (!window.FitAddon && globalThis.FitAddon) window.FitAddon = globalThis.FitAddon;
+    window.dispatchEvent(new Event('xterm-ready'));
+  </script>
+  <script src="js/XtermTerminal.js"></script>
+
+  <!-- Components -->
+  <script src="js/components/Navbar.js"></script>
+  <script src="js/components/Sidebar.js"></script>
+  <script src="js/components/Modal.js"></script>
+  <script src="js/components/Toast.js"></script>
+  <script src="js/components/StatusBadge.js"></script>
+  <script src="js/components/LogViewer.js"></script>
+  <script src="js/components/DirectoryBrowser.js"></script>
+  <script src="js/components/Timeline.js"></script>
+  <script src="js/components/NotificationManager.js"></script>
+  <script src="js/components/CommandPalette.js"></script>
+  <script src="js/components/TerminalPanel.js"></script>
+  <script src="js/components/EmptyState.js"></script>
+  <script src="js/components/LoadingState.js"></script>
+  <script src="js/components/FormValidator.js"></script>
+  <script src="js/components/ConfirmDialog.js"></script>
+  <script src="js/components/ApiKeyPrompt.js"></script>
+
+  <!-- Pages -->
+  <script src="js/pages/DashboardPage.js"></script>
+  <script src="js/pages/AgentCard.js"></script>
+  <script src="js/pages/AgentCreate.js"></script>
+  <script src="js/pages/AgentDetail.js"></script>
+  <script src="js/pages/AgentsPage.js"></script>
+  <script src="js/pages/WorkflowCanvas.js"></script>
+  <script src="js/pages/WorkflowReadOnlyView.js"></script>
+  <script src="js/pages/WorkflowToolbar.js"></script>
+  <script src="js/pages/WorkflowsPage.js"></script>
+  <script src="js/pages/TaskCard.js"></script>
+  <script src="js/pages/TaskCreate.js"></script>
+  <script src="js/pages/TaskDetail.js"></script>
+  <script src="js/pages/TasksPage.js"></script>
+  <script src="js/pages/TaskQueueDetail.js"></script>
+  <script src="js/pages/FilesPage.js"></script>
+  <script src="js/pages/FileTree.js"></script>
+  <script src="js/pages/BroadcastPage.js"></script>
+  <script src="js/pages/HistoryPage.js"></script>
+  <script src="js/pages/ReportsPage.js"></script>
+  <script src="js/pages/WorkflowTemplates.js"></script>
+  <script src="js/pages/SkillsMarket.js"></script>
+  <script src="js/pages/McpMarket.js"></script>
+  <script src="js/pages/SettingsPage.js"></script>
+  <script src="js/pages/ChatPage.js"></script>
+  <script src="js/pages/TerminalPage.js"></script>
+  <script src="js/pages/ArtifactsPage.js"></script>
+  <script src="js/pages/MemoryPage.js"></script>
+  <script src="js/pages/KnowledgePage.js"></script>
+  <script src="js/pages/AnalyticsPage.js"></script>
+
+  <!-- App Init (must be last) -->
+  <script src="js/app.js"></script>
+</body>
+</html>
