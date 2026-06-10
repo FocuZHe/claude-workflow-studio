@@ -13,6 +13,7 @@ const fs = require('fs');
 const config = require('./config');
 const logger = require('./utils/logger');
 const { errorHandler, notFoundHandler } = require('./middleware/errorHandler');
+const { rateLimit, safetyHeaders } = require('./middleware/safety');
 const FileService = require('./services/FileService');
 const WorkspaceStateService = require('./services/WorkspaceStateService');
 const WorkspaceManager = require('./services/WorkspaceManager');
@@ -69,6 +70,10 @@ app.use(morgan('dev'));
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
+// Security middleware（只启用无副作用的安全中间件）
+app.use(rateLimit({ windowMs: 60000, max: 200 }));  // 200次/分钟，本地正常使用不会触发
+app.use(safetyHeaders());  // 添加安全响应头
+
 // Static files - 使用 config.staticDir 指向 src/client
 app.use(express.static(config.staticDir));
 
@@ -106,8 +111,13 @@ app.use('/api/safety', safetyRouter);
 app.use('/api/knowledge', knowledgeRouter);
 app.use('/api/api-keys', apiKeysRouter);
 
-// Auth key endpoint - 前端用于获取API key
+// Auth key endpoint - 前端用于获取API key（仅允许本地访问）
 app.get('/api/auth/key', (req: any, res: any) => {
+  const clientIp = req.ip || req.connection?.remoteAddress || '';
+  const isLocal = clientIp === '127.0.0.1' || clientIp === '::1' || clientIp === '::ffff:127.0.0.1' || clientIp === 'localhost';
+  if (!isLocal) {
+    return res.status(403).json({ success: false, error: '仅允许本地访问' });
+  }
   try {
     const { getApiKey } = require('./middleware/auth');
     const apiKey = getApiKey();
