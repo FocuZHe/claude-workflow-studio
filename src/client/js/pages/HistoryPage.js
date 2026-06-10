@@ -291,6 +291,8 @@ window.HistoryPage = (() => {
         if (!_selectionMode) {
             _selectedIds.clear();
             removeBatchActionBar();
+        } else {
+            showBatchActionBar();
         }
         loadHistory();
     }

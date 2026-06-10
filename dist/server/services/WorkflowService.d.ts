@@ -149,7 +149,9 @@ export declare class WorkflowService {
     static _claudeService: any;
     static _pendingApprovals: Map<string, ApprovalEntry>;
     static _currentRunIds: Map<string, string>;
-    static _activeOrchestrators: Map<string, any>;
+    static _activeOrchestrators: Map<string, {
+        shutdownAll: () => Promise<void>;
+    }>;
     /**
      * Initialize WorkflowService with dependencies
      */

@@ -389,7 +389,8 @@ ${workflowInstructions}
                     const toolResults = await Promise.all(toolCalls.map(async (toolCall) => {
                         const { name, input: toolInput, id: toolUseId } = toolCall;
                         if (name === 'call_sub_agent') {
-                            const { agent_type, prompt } = toolInput;
+                            const agent_type = toolInput.agent_type;
+                            const prompt = toolInput.prompt;
                             // 检查停止标志
                             if (this.stopped) {
                                 return {
@@ -485,7 +486,7 @@ ${workflowInstructions}
                     keepRunning = false;
                     // 提取最终文本结果
                     const textBlocks = response.content.filter((block) => block.type === 'text');
-                    finalResult = textBlocks.map((block) => block.text).join('\n');
+                    finalResult = textBlocks.map(block => block.text).join('\n');
                 }
             }
             if (iteration >= maxIterations) {
@@ -516,7 +517,7 @@ ${workflowInstructions}
     /**
      * 构建工作流执行指令（支持并行执行）
      */
-    buildWorkflowInstructions(workflow, userInput) {
+    buildWorkflowInstructions(workflow, userInput, _visitedWorkflowIds = new Set(), _depth = 0) {
         const edges = workflow.edges || [];
         const nodeById = {};
         for (const n of workflow.nodes)
@@ -586,21 +587,45 @@ ${workflowInstructions}
 - agent_type: "${agentType}"
 - prompt: "${finalTask}"`);
             processedNodes.add(nodeId);
-            // 如果当前节点有多个下游（分叉），生成并行执行指令
+            // 如果当前节点有多个下游（分叉）
             if (downstream.length > 1) {
-                stepNum++;
-                const parallelNodes = downstream.map(id => nodeById[id]).filter(Boolean);
-                const parallelInstructions = parallelNodes.map(n => {
-                    const nTask = n.defaultPrompt || n.config?.systemPrompt || '执行分配的任务';
-                    const nAgentType = this.inferAgentType(n);
-                    return `  - call_sub_agent(agent_type: "${nAgentType}", prompt: "${nTask}")`;
-                }).join('\n');
-                steps.push(`步骤 ${stepNum}: **并行执行** (${parallelNodes.map(n => n.label || n.id).join(' + ')})
+                // Condition 节点：生成条件路由指令（选择一条分支）
+                if (node.type === 'condition') {
+                    stepNum++;
+                    const branches = downstream.map(id => nodeById[id]).filter(Boolean);
+                    const branchInstructions = branches.map((n, i) => {
+                        const nTask = n.defaultPrompt || n.config?.systemPrompt || '执行分配的任务';
+                        const nAgentType = this.inferAgentType(n);
+                        const label = n.label || n.id;
+                        return `  分支 ${i + 1} [${label}]: call_sub_agent(agent_type: "${nAgentType}", prompt: "${nTask}")`;
+                    }).join('\n');
+                    const conditionDesc = node.config?.systemPrompt || node.defaultPrompt || '根据上游输出判断';
+                    steps.push(`步骤 ${stepNum}: **条件判断** (${node.label || node.type})
+【你必须先分析上游节点的输出，然后选择一个分支执行】
+判断依据: ${conditionDesc}
+
+可选分支:
+${branchInstructions}
+
+⚠️ 重要：你只能选择其中一个分支执行，不要同时执行多个分支！根据上游输出的内容和质量，选择最合适的分支。`);
+                    // 不标记下游节点为已处理，让它们在后续拓扑排序中自然出现
+                }
+                else {
+                    // 普通分叉：并行执行
+                    stepNum++;
+                    const parallelNodes = downstream.map(id => nodeById[id]).filter(Boolean);
+                    const parallelInstructions = parallelNodes.map(n => {
+                        const nTask = n.defaultPrompt || n.config?.systemPrompt || '执行分配的任务';
+                        const nAgentType = this.inferAgentType(n);
+                        return `  - call_sub_agent(agent_type: "${nAgentType}", prompt: "${nTask}")`;
+                    }).join('\n');
+                    steps.push(`步骤 ${stepNum}: **并行执行** (${parallelNodes.map(n => n.label || n.id).join(' + ')})
 【必须在同一轮对话中同时调用以下所有 call_sub_agent】
 ${parallelInstructions}
 
 ⚠️ 重要：你必须在一条消息中同时调用所有 call_sub_agent，不要分多条消息！`);
-                parallelNodes.forEach(n => processedNodes.add(n.id));
+                    parallelNodes.forEach(n => processedNodes.add(n.id));
+                }
             }
         }
         // 处理汇聚节点（有多个上游但未被处理的节点）
@@ -633,27 +658,40 @@ ${parallelInstructions}
                 processedNodes.add(nodeId);
             }
         }
-        // 添加子工作流节点支持
+        // 添加子工作流节点支持（带循环检测和深度限制）
+        const MAX_SUBWORKFLOW_DEPTH = 5;
         for (const node of workflow.nodes) {
             if (node.type === 'subworkflow' && !processedNodes.has(node.id)) {
                 stepNum++;
                 const subWfId = node.config?.subWorkflowId || node.config?.workflowId;
                 if (subWfId) {
+                    // 循环检测：如果子工作流已被访问过，跳过
+                    if (_visitedWorkflowIds.has(subWfId)) {
+                        steps.push(`步骤 ${stepNum}: **${node.label || node.type}** (${node.type}) [子工作流: ${subWfId}]
+⚠️ 检测到循环引用，跳过此子工作流。`);
+                        processedNodes.add(node.id);
+                        continue;
+                    }
+                    // 深度限制：超过最大嵌套层数时停止展开
+                    if (_depth >= MAX_SUBWORKFLOW_DEPTH) {
+                        steps.push(`步骤 ${stepNum}: **${node.label || node.type}** (${node.type}) [子工作流: ${subWfId}]
+⚠️ 已达到最大嵌套深度（${MAX_SUBWORKFLOW_DEPTH}层），停止展开子工作流。请直接执行此步骤。`);
+                        processedNodes.add(node.id);
+                        continue;
+                    }
                     const subWf = require('../models/Workflow').findById(subWfId);
                     if (subWf) {
-                        const subSteps = subWf.nodes
-                            .filter((n) => n.type !== 'start' && n.type !== 'end')
-                            .map((sn, si) => {
-                            const subTask = sn.defaultPrompt || sn.config?.systemPrompt || '执行分配的任务';
-                            const subAgentType = this.inferAgentType(sn);
-                            return `  ${si + 1}. call_sub_agent(agent_type: "${subAgentType}", prompt: "${subTask}")`;
-                        })
-                            .join('\n');
+                        // 递归展开子工作流，传递已访问集合和深度
+                        const visited = new Set(_visitedWorkflowIds);
+                        visited.add(subWfId);
+                        const subInstructions = this.buildWorkflowInstructions(subWf, '', visited, _depth + 1);
                         steps.push(`步骤 ${stepNum}: **${node.label || node.type}** (${node.type}) [子工作流: ${subWf.name || subWfId}]
-【必须调用 call_sub_agent 工具执行以下子工作流步骤】
-${subSteps}
-
-⚠️ 重要：按照上面的顺序依次执行每个步骤！`);
+【执行以下子工作流】
+${subInstructions}`);
+                    }
+                    else {
+                        steps.push(`步骤 ${stepNum}: **${node.label || node.type}** (${node.type}) [子工作流: ${subWfId}]
+⚠️ 子工作流 ${subWfId} 不存在，跳过。`);
                     }
                 }
                 processedNodes.add(node.id);

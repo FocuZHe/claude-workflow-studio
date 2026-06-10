@@ -387,6 +387,8 @@ window.AgentsPage = (() => {
         if (!_selectionMode) {
             _selectedIds.clear();
             removeBatchActionBar();
+        } else {
+            showBatchActionBar();
         }
         renderGrid();
     }

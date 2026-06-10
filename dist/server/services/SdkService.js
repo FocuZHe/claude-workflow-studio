@@ -61,10 +61,10 @@ class SdkService extends EventEmitter {
     _runningTasks;
     _cacheFilePath;
     // 并发控制
-    _agentLimit; // p-limit instance
-    _gitLockLimit; // Git操作串行锁
+    _agentLimit;
+    _gitLockLimit;
     // 活跃的子Agent运行器
-    _activeRunners;
+    _activeRunners; // SubAgentRunner instances
     // 关机标志
     _isShuttingDown;
     // 环境变量操作互斥锁（防止并发SDK调用丢失auth token）
@@ -129,13 +129,14 @@ class SdkService extends EventEmitter {
      * 防止并发SDK调用同时操作process.env导致auth token丢失
      */
     async _withEnvLock(fn) {
+        let result;
         this._envMutex = this._envMutex.then(async () => {
             const savedAuthToken = process.env.ANTHROPIC_AUTH_TOKEN;
             const savedApiKey = process.env.ANTHROPIC_API_KEY;
             delete process.env.ANTHROPIC_AUTH_TOKEN;
             delete process.env.ANTHROPIC_API_KEY;
             try {
-                return await fn();
+                result = await fn();
             }
             finally {
                 if (savedAuthToken)
@@ -144,7 +145,8 @@ class SdkService extends EventEmitter {
                     process.env.ANTHROPIC_API_KEY = savedApiKey;
             }
         });
-        return this._envMutex;
+        await this._envMutex;
+        return result;
     }
     /**
      * 加载已完成任务的缓存（持久化）
@@ -159,7 +161,6 @@ class SdkService extends EventEmitter {
         }
         catch (e) {
             if (e.code !== 'ENOENT') {
-                // 忽略文件不存在的错误，记录其他错误
                 logger.warn('加载任务缓存失败:', e.message);
             }
         }
@@ -1018,7 +1019,7 @@ ${mergePrompt}
             // 使用 Claude Agent SDK 的 query 函数
             const { query } = require('@anthropic-ai/claude-agent-sdk');
             // 检查是否需要审批节点支持
-            const hasApprovalNode = this._executableNodes.some((n) => n.type === 'approval');
+            const hasApprovalNode = this._executableNodes.some(n => n.type === 'approval');
             const pendingApprovals = this._pendingApprovals;
             // 获取 Agent 安装的技能
             const SkillService = require('./SkillService');
@@ -1268,7 +1269,7 @@ ${mergePrompt}
         }
         // 1. 安全拦截 - 阻止危险命令
         if (toolName === 'Bash') {
-            const command = toolInput.command || '';
+            const command = String(toolInput.command || '');
             const dangerousPatterns = [
                 /rm\s+-rf\s+[\/\\]/, // rm -rf /
                 /mkfs/, // 格式化磁盘
@@ -1582,11 +1583,13 @@ ${mergePrompt}
                 sdkSystemPrompt = `你是一个专业的 ${nodeInfo.label || '执行者'}。`;
             }
             // 添加技能和 MCP 工具信息
-            if ((nodeInfo.skills || []).length > 0) {
-                sdkSystemPrompt += `\n\n[可用技能]\n${nodeInfo.skills.join('\n')}`;
+            const skills = nodeInfo.skills;
+            const mcp = nodeInfo.mcp;
+            if (skills && skills.length > 0) {
+                sdkSystemPrompt += `\n\n[可用技能]\n${skills.join('\n')}`;
             }
-            if ((nodeInfo.mcp || []).length > 0) {
-                sdkSystemPrompt += `\n\n[外部工具]\n${nodeInfo.mcp.join('\n')}`;
+            if (mcp && mcp.length > 0) {
+                sdkSystemPrompt += `\n\n[外部工具]\n${mcp.join('\n')}`;
             }
             // 添加权限信息到系统提示
             const permEntries = Object.entries(derivedPermissions);

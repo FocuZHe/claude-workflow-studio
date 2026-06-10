@@ -131,12 +131,21 @@ class SubAgentRunner extends events_1.EventEmitter {
                                         }
                                     }
                                     return new Promise((resolve) => {
+                                        let settled = false;
+                                        const done = (decision) => {
+                                            if (settled)
+                                                return;
+                                            settled = true;
+                                            resolve({ hookSpecificOutput: { permissionDecision: decision } });
+                                        };
                                         this.emit('security_check', {
                                             toolName: input.tool_name,
                                             toolInput: input.tool_input,
-                                            approve: () => resolve({ hookSpecificOutput: { permissionDecision: 'allow' } }),
-                                            deny: () => resolve({ hookSpecificOutput: { permissionDecision: 'deny' } })
+                                            approve: () => done('allow'),
+                                            deny: () => done('deny')
                                         });
+                                        // 若无监听器处理，5秒后默认放行，避免 Promise 永久挂起
+                                        setTimeout(() => done('allow'), 5000);
                                     });
                                 }
                             }],

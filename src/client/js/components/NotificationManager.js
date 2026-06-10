@@ -93,34 +93,33 @@ window.NotificationManager = (() => {
             footer: `<button class="btn btn-danger approval-reject-btn">拒绝</button>
         <button class="btn btn-primary approval-approve-btn">通过</button>`,
         });
-        setTimeout(() => {
-            document.querySelector('.approval-approve-btn')?.addEventListener('click', async () => {
-                const comment = document.getElementById('approval-comment')?.value.trim() || '';
-                try {
-                    await API.respondApproval(approvalRequestId, 'approve', comment);
-                    Toast.success('已通过');
-                    Modal.close();
-                }
-                catch (e) {
-                    Toast.error(e.message);
-                }
-            });
-            document.querySelector('.approval-reject-btn')?.addEventListener('click', async () => {
-                const comment = document.getElementById('approval-comment')?.value.trim() || '';
-                if (!comment) {
-                    Toast.warning('请填写拒绝原因');
-                    return;
-                }
-                try {
-                    await API.respondApproval(approvalRequestId, 'reject', comment);
-                    Toast.info('已拒绝');
-                    Modal.close();
-                }
-                catch (e) {
-                    Toast.error(e.message);
-                }
-            });
-        }, 100);
+        // Modal.open 后 DOM 立即可用，直接绑定事件（无需 setTimeout）
+        document.querySelector('.approval-approve-btn')?.addEventListener('click', async () => {
+            const comment = document.getElementById('approval-comment')?.value.trim() || '';
+            try {
+                await API.respondApproval(approvalRequestId, 'approve', comment);
+                Toast.success('已通过');
+                Modal.close();
+            }
+            catch (e) {
+                Toast.error(e.message);
+            }
+        });
+        document.querySelector('.approval-reject-btn')?.addEventListener('click', async () => {
+            const comment = document.getElementById('approval-comment')?.value.trim() || '';
+            if (!comment) {
+                Toast.warning('请填写拒绝原因');
+                return;
+            }
+            try {
+                await API.respondApproval(approvalRequestId, 'reject', comment);
+                Toast.info('已拒绝');
+                Modal.close();
+            }
+            catch (e) {
+                Toast.error(e.message);
+            }
+        });
         addNotification({ title: `审核请求: ${title}`, body: description || '', type: 'info', time: new Date().toISOString() });
     }
     function addNotification(notification) {

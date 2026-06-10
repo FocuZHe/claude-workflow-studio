@@ -9,7 +9,7 @@
 }
 
 @keyframes fadeInUp {
-  from { opacity: 0; transform: translateY(12px); }
+  from { opacity: 0; transform: translateY(16px); }
   to { opacity: 1; transform: translateY(0); }
 }
 
@@ -29,15 +29,15 @@
   to { opacity: 1; transform: translateX(0); }
 }
 
-/* ── Toast ── */
+/* ── Toast (center top) ── */
 @keyframes toast-in {
-  from { opacity: 0; transform: translateX(40px) scale(0.95); }
-  to { opacity: 1; transform: translateX(0) scale(1); }
+  from { opacity: 0; transform: translateY(-16px) scale(0.96); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
 }
 
 @keyframes toast-out {
-  from { opacity: 1; transform: translateX(0) scale(1); }
-  to { opacity: 0; transform: translateX(40px) scale(0.95); }
+  from { opacity: 1; transform: translateY(0) scale(1); }
+  to { opacity: 0; transform: translateY(-10px) scale(0.96); }
 }
 
 /* ── Pulse ── */
@@ -47,8 +47,8 @@
 }
 
 @keyframes pulse-glow {
-  0%, 100% { box-shadow: 0 0 5px rgba(0, 210, 255, 0.2); }
-  50% { box-shadow: 0 0 15px rgba(0, 210, 255, 0.4), 0 0 30px rgba(0, 210, 255, 0.1); }
+  0%, 100% { box-shadow: 0 0 5px var(--accent-cyan); }
+  50% { box-shadow: 0 0 15px var(--accent-cyan), 0 0 30px var(--glow-subtle); }
 }
 
 @keyframes pulse {
@@ -95,22 +95,22 @@
 
 /* ── Page transition ── */
 .page-enter {
-  animation: fadeInUp var(--duration) var(--ease-out);
+  animation: fadeInUp var(--duration-normal) var(--ease-out);
 }
 
 /* ── Stagger children ── */
 .stagger > * {
-  animation: fadeInUp var(--duration) var(--ease-out) both;
+  animation: fadeInUp var(--duration-normal) var(--ease-out) both;
 }
 
 .stagger > *:nth-child(1) { animation-delay: 0ms; }
-.stagger > *:nth-child(2) { animation-delay: 50ms; }
-.stagger > *:nth-child(3) { animation-delay: 100ms; }
-.stagger > *:nth-child(4) { animation-delay: 150ms; }
-.stagger > *:nth-child(5) { animation-delay: 200ms; }
-.stagger > *:nth-child(6) { animation-delay: 250ms; }
-.stagger > *:nth-child(7) { animation-delay: 300ms; }
-.stagger > *:nth-child(8) { animation-delay: 350ms; }
+.stagger > *:nth-child(2) { animation-delay: 40ms; }
+.stagger > *:nth-child(3) { animation-delay: 80ms; }
+.stagger > *:nth-child(4) { animation-delay: 120ms; }
+.stagger > *:nth-child(5) { animation-delay: 160ms; }
+.stagger > *:nth-child(6) { animation-delay: 200ms; }
+.stagger > *:nth-child(7) { animation-delay: 240ms; }
+.stagger > *:nth-child(8) { animation-delay: 280ms; }
 
 /* ── Running indicator ── */
 .running-indicator {
@@ -140,34 +140,30 @@
 
 /* ── Hover lift ── */
 .hover-lift {
-  transition: transform var(--duration) var(--ease-out);
+  transition: transform var(--duration) var(--ease-out),
+              box-shadow var(--duration) var(--ease-out);
 }
 
 .hover-lift:hover {
   transform: translateY(-2px);
+  box-shadow: var(--glow-subtle), var(--shadow-sm);
 }
 
-/* ── Page transitions ── */
-/* Page enter is already defined above as .page-enter */
-
+/* ── Page leave ── */
 .page-leave {
-  animation: pageLeave 0.2s ease-in;
+  animation: pageLeave 0.15s ease-in forwards;
 }
 
 @keyframes pageLeave {
-  from {
-    opacity: 1;
-    transform: translateY(0);
-  }
   to {
     opacity: 0;
-    transform: translateY(-10px);
+    transform: translateY(-8px);
   }
 }
 
 /* ── List item enter ── */
 .list-item-enter {
-  animation: listItemEnter 0.3s ease-out;
+  animation: listItemEnter 0.25s ease-out;
 }
 
 @keyframes listItemEnter {
@@ -204,13 +200,13 @@
   100% { transform: translateX(0); opacity: 1; }
 }
 
-/* ── Button click animation ── */
+/* ── Button click ── */
 .btn:active {
   transform: scale(0.97);
   transition: transform 0.1s;
 }
 
-/* ── Card enter animation ── */
+/* ── Card enter ── */
 .card-enter {
   animation: cardEnter 0.3s ease-out;
 }
@@ -223,5 +219,122 @@
   to {
     opacity: 1;
     transform: scale(1);
+  }
+}
+
+/* ── Nav active line slide ── */
+@keyframes navLineSlide {
+  from { height: 0; opacity: 0; }
+  to { height: 60%; opacity: 1; }
+}
+
+/* ── Stat value pop ── */
+@keyframes statPop {
+  0% { transform: scale(0.8); opacity: 0; }
+  60% { transform: scale(1.05); }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+/* ── List item delete (height collapse) ── */
+.list-item-exit {
+  animation: listItemExit 0.3s ease-in forwards;
+  overflow: hidden;
+}
+
+@keyframes listItemExit {
+  to {
+    opacity: 0;
+    max-height: 0;
+    padding-top: 0;
+    padding-bottom: 0;
+    margin-top: 0;
+    margin-bottom: 0;
+    transform: translateX(20px);
+  }
+}
+
+/* ── Data update flash ── */
+.data-flash {
+  animation: dataFlash 0.5s ease-out;
+}
+
+@keyframes dataFlash {
+  0% { background-color: transparent; }
+  30% { background-color: var(--accent-cyan-bg-strong); }
+  100% { background-color: transparent; }
+}
+
+/* ── SVG edge flow animation ── */
+@keyframes edgeFlow {
+  from { stroke-dashoffset: 20; }
+  to { stroke-dashoffset: 0; }
+}
+
+.edge-flowing {
+  stroke-dasharray: 10 10;
+  animation: edgeFlow 1s linear infinite;
+}
+
+/* ── Status border glow ── */
+@keyframes statusPulse {
+  0%, 100% { border-color: var(--accent-cyan); }
+  50% { border-color: var(--accent-cyan-dim); }
+}
+
+.status-running {
+  animation: statusPulse 2s ease-in-out infinite;
+}
+
+/* ── Sidebar collapse transition ── */
+.sidebar {
+  transition: width 0.25s var(--ease-out),
+              padding 0.25s var(--ease-out);
+}
+
+.sidebar.collapsed .nav-item span:not(.nav-icon) {
+  transition: opacity 0.15s ease;
+}
+
+/* ── Input focus glow ── */
+.input:focus,
+.select:focus,
+.textarea:focus {
+  box-shadow: 0 0 0 2px var(--accent-cyan-bg), 0 0 12px var(--glow-subtle);
+  transition: box-shadow 0.2s ease;
+}
+
+/* ── Tab underline slide ── */
+@keyframes tabSlide {
+  from { transform: scaleX(0); }
+  to { transform: scaleX(1); }
+}
+
+.tab-indicator {
+  animation: tabSlide 0.2s var(--ease-out);
+  transform-origin: left;
+}
+
+/* ── Notification badge bounce ── */
+@keyframes badgeBounce {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.3); }
+}
+
+.badge-new {
+  animation: badgeBounce 0.3s ease-out;
+}
+
+/* ── Modal backdrop blur (only for actual modals) ── */
+.modal-overlay.active {
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+}
+
+/* ── Reduced motion preference ── */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
   }
 }

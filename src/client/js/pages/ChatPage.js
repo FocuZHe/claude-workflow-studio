@@ -279,6 +279,7 @@ window.ChatPage = (() => {
         }
         catch (e) {
             console.warn('加载对话列表失败:', e.message);
+            Toast.error('加载对话列表失败: ' + (e.message || e));
         }
     }
     async function searchSessions() {

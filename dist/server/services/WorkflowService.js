@@ -42,8 +42,7 @@ class WorkflowService {
      */
     static fixStaleExecutionLogs() {
         try {
-            const result = WorkflowModel.findAll({ limit: 99999 });
-            const workflows = Array.isArray(result) ? result : (result.items || []);
+            const workflows = WorkflowModel.getAll();
             let fixedCount = 0;
             let interruptedCount = 0;
             for (const wf of workflows) {
@@ -138,8 +137,7 @@ class WorkflowService {
      */
     static resetStuckNodes() {
         try {
-            const result = WorkflowModel.findAll({ limit: 99999 });
-            const workflows = Array.isArray(result) ? result : (result.items || []);
+            const workflows = WorkflowModel.getAll();
             let resetCount = 0;
             let interruptCount = 0;
             for (const wf of workflows) {
@@ -451,7 +449,7 @@ class WorkflowService {
         WorkflowService._broadcastStatusUpdate(id, 'running', runId);
         // Always use Master Agent mode
         logger.info(`Workflow ${id}: using MasterAgent mode (native Agent tool collaboration)`);
-        WorkflowService._executeMasterAgentWithRetry(id, runId, input, workflow, 3).catch((err) => {
+        WorkflowService._executeMasterAgentWithRetry(id, runId, input, workflow, 1).catch((err) => {
             logger.error(`MasterAgent execution error: ${id}`, { runId, error: err.message, stack: err.stack });
             try {
                 WorkflowService._failWorkflow(id, runId, err.message);
@@ -734,7 +732,15 @@ class WorkflowService {
                     const pids = output.split('\n').filter((p) => p.trim()).map((p) => parseInt(p));
                     for (const pid of pids) {
                         if (pid > 0 && pid !== process.pid) {
-                            pidsToKill.push({ pid, info: 'lsof detected' });
+                            try {
+                                // 验证进程名，只清理 node/python/uvicorn 进程
+                                const { stdout: cmdOutput } = await execAsync(`ps -p ${pid} -o comm=`, { encoding: 'utf-8', timeout: 3000 });
+                                const processName = cmdOutput.trim().toLowerCase();
+                                if (processName.includes('node') || processName.includes('python') || processName.includes('uvicorn')) {
+                                    pidsToKill.push({ pid, info: processName });
+                                }
+                            }
+                            catch (e) { /* 进程已退出或无权限，忽略 */ }
                         }
                     }
                 }
@@ -764,8 +770,7 @@ class WorkflowService {
     static cleanupStaleSubagentProcesses() {
         try {
             // 检查是否有工作流正在运行
-            const result = WorkflowModel.findAll({ limit: 99999 });
-            const workflows = Array.isArray(result) ? result : (result.items || []);
+            const workflows = WorkflowModel.getAll();
             const runningWorkflows = workflows.filter((wf) => wf.executionStatus === 'running' || wf.status === 'running');
             if (runningWorkflows.length > 0) {
                 logger.info(`Skipping cleanup: ${runningWorkflows.length} workflow(s) still running`);

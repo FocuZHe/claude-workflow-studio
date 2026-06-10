@@ -58,7 +58,10 @@ const TerminalService = require('./services/TerminalService');
 const app = express();
 const server = http.createServer(app);
 // Middleware
-app.use(cors());
+app.use(cors({
+    origin: true, // 允许所有来源（本地开发工具，无需限制）
+    credentials: true
+}));
 app.use(morgan('dev'));
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));

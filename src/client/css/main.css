@@ -17,26 +17,28 @@ html {
 
 body {
   font-family: var(--font-sans);
+  line-height: var(--line-height);
   background: var(--bg-deep);
   color: var(--text-primary);
-  line-height: 1.6;
   overflow: hidden;
   height: 100vh;
   height: 100dvh;
   width: 100%;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 /* ── Scrollbar ── */
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 7px;
+  height: 7px;
 }
 ::-webkit-scrollbar-track {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
   background: var(--border-bright);
-  border-radius: 3px;
+  border-radius: 4px;
 }
 ::-webkit-scrollbar-thumb:hover {
   background: var(--accent-cyan-dim);
@@ -44,7 +46,7 @@ body {
 
 /* ── Selection ── */
 ::selection {
-  background: rgba(0, 210, 255, 0.2);
+  background: var(--accent-cyan-bg-strong);
   color: var(--text-primary);
 }
 

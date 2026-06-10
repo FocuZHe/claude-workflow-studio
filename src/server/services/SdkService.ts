@@ -13,6 +13,53 @@ const { AppError } = require('../middleware/errorHandler');
 const ApiKeyService = require('./ApiKeyService');
 const logger = require('../utils/logger');
 
+// ── 类型定义 ──
+
+interface TaskForDedup {
+  taskId?: string;
+  description?: string;
+  task?: string;
+  model?: string;
+  allowedFiles?: string[];
+}
+
+interface ExecutionConfig {
+  model?: string;
+  systemPrompt?: string;
+  agentType?: string;
+  allowedTools?: string[];
+  maxTurns?: number;
+  cwd?: string;
+  skills?: string[];
+  permissionMode?: string;
+  allowedFiles?: string[];
+  [key: string]: any;
+}
+
+interface ToolCallRecord {
+  toolName: string;
+  toolInput: Record<string, unknown>;
+  toolUseId: string;
+  parentToolUseId?: string;
+  sessionId?: string;
+  timestamp: Date;
+  result?: string;
+}
+
+interface BroadcastService {
+  broadcast(event: string, data: Record<string, unknown>): void;
+}
+
+interface TaskExecutionResult {
+  success: boolean;
+  cached?: boolean;
+  message?: string;
+  taskId?: string;
+  result?: string;
+  error?: string;
+  duration?: number;
+}
+
 // 网络错误代码（用于网络自愈）
 const NETWORK_ERRORS = [
   'ENOTFOUND',
@@ -30,7 +77,7 @@ const LOGS_DIR = path.join(process.cwd(), 'logs');
  * 生成任务的确定性哈希（用于去重）
  * 基于任务描述、允许的文件范围和模型生成唯一标识
  */
-function getTaskKey(task: any): string {
+function getTaskKey(task: TaskForDedup): string {
   const normalized = {
     taskId: task.taskId || null,  // 使用 taskId 作为唯一标识
     desc: (task.description || task.task || '').trim(),
@@ -47,34 +94,51 @@ function getTaskKey(task: any): string {
  *
  */
 class SdkService extends EventEmitter {
-  broadcastService: any;
+  broadcastService: BroadcastService | null;
   activeStreams: Map<string, any>;
-  _messageBuffers: Map<string, { buffer: any[], timer: ReturnType<typeof setTimeout> | null }>;
+  _messageBuffers: Map<string, { buffer: Array<{ chunk: string; done: boolean }>, timer: ReturnType<typeof setTimeout> | null }>;
   _taskWorkflowMap: Map<string, string>;
-  _taskMetaMap: Map<string, any>;
-  _pendingApprovals: Map<string, any>;
+  _taskMetaMap: Map<string, Record<string, unknown>>;
+  _pendingApprovals: Map<string, {
+    taskId?: string;
+    result?: unknown;
+    attempts?: number;
+    createdAt?: Date;
+    toolName?: string;
+    toolInput?: Record<string, unknown>;
+    resolve?: (value: any) => void;
+    timer?: ReturnType<typeof setTimeout>;
+    [key: string]: unknown;
+  }>;
   _maxAgentDepth: number;
   _agentCallIndex: number;
-  _executableNodes: any[];
+  _executableNodes: Array<{ id: string; type: string; [key: string]: unknown }>;
   _checkpointCallback: ((nodeId: string, label: string, output: string) => void) | null;
-  _nodeRegistry: Record<string, any>;
+  _nodeRegistry: Record<string, {
+    task?: string;
+    model?: string;
+    systemPrompt?: string;
+    rolePrompt?: string;
+    agentType?: string;
+    [key: string]: unknown;
+  }>;
   // 任务去重缓存
   _completedTasks: Set<string>;
-  _runningTasks: Map<string, Promise<any>>;
+  _runningTasks: Map<string, Promise<TaskExecutionResult>>;
   _cacheFilePath: string;
   // 并发控制
-  _agentLimit: any;  // p-limit instance
-  _gitLockLimit: any;  // Git操作串行锁
+  _agentLimit: (fn: () => Promise<any>) => Promise<any>;
+  _gitLockLimit: (fn: () => Promise<any>) => Promise<any>;
   // 活跃的子Agent运行器
-  _activeRunners: Map<string, any>;
+  _activeRunners: Map<string, any>;  // SubAgentRunner instances
   // 关机标志
   _isShuttingDown: boolean;
   // 环境变量操作互斥锁（防止并发SDK调用丢失auth token）
-  _envMutex: Promise<any>;
+  _envMutex: Promise<unknown>;
   // 每任务熔断器（替代全局熔断器，避免任务间互相影响）
-  _circuitBreakers: Map<string, any>;
+  _circuitBreakers: Map<string, { call: (fn: () => Promise<any>) => Promise<any> }>;
 
-  constructor(broadcastService: any) {
+  constructor(broadcastService: BroadcastService | null) {
     super();  // 调用 EventEmitter 构造函数
     this.broadcastService = broadcastService;
     this.activeStreams = new Map();
@@ -134,19 +198,21 @@ class SdkService extends EventEmitter {
    * 防止并发SDK调用同时操作process.env导致auth token丢失
    */
   async _withEnvLock<T>(fn: () => Promise<T>): Promise<T> {
+    let result: T;
     this._envMutex = this._envMutex.then(async () => {
       const savedAuthToken = process.env.ANTHROPIC_AUTH_TOKEN;
       const savedApiKey = process.env.ANTHROPIC_API_KEY;
       delete process.env.ANTHROPIC_AUTH_TOKEN;
       delete process.env.ANTHROPIC_API_KEY;
       try {
-        return await fn();
+        result = await fn();
       } finally {
         if (savedAuthToken) process.env.ANTHROPIC_AUTH_TOKEN = savedAuthToken;
         if (savedApiKey) process.env.ANTHROPIC_API_KEY = savedApiKey;
       }
     });
-    return this._envMutex;
+    await this._envMutex;
+    return result!;
   }
 
   /**
@@ -161,7 +227,6 @@ class SdkService extends EventEmitter {
       }
     } catch (e: any) {
       if (e.code !== 'ENOENT') {
-        // 忽略文件不存在的错误，记录其他错误
         logger.warn('加载任务缓存失败:', e.message);
       }
     }
@@ -188,7 +253,7 @@ class SdkService extends EventEmitter {
    * 检查任务是否已执行或正在执行
    * @returns {boolean} true 表示应该跳过（已执行或正在执行）
    */
-  _isTaskDuplicate(task: any): boolean {
+  _isTaskDuplicate(task: TaskForDedup): boolean {
     const key = getTaskKey(task);
     if (this._completedTasks.has(key)) {
       logger.info(`任务去重: 跳过已完成的任务 (hash: ${key.slice(0, 8)}...)`);
@@ -204,7 +269,7 @@ class SdkService extends EventEmitter {
   /**
    * 标记任务为正在执行
    */
-  _markTaskRunning(task: any, promise: Promise<any>): void {
+  _markTaskRunning(task: TaskForDedup, promise: Promise<TaskExecutionResult>): void {
     const key = getTaskKey(task);
     this._runningTasks.set(key, promise);
   }
@@ -212,7 +277,7 @@ class SdkService extends EventEmitter {
   /**
    * 标记任务为已完成
    */
-  _markTaskCompleted(task: any): void {
+  _markTaskCompleted(task: TaskForDedup): void {
     const key = getTaskKey(task);
     this._completedTasks.add(key);
     // 清理过大的 _completedTasks 缓存，防止内存泄漏
@@ -328,7 +393,7 @@ class SdkService extends EventEmitter {
    * @param parentToolUseId 父工具调用ID（用于级联追踪）
    * @param sessionId 会话ID
    */
-  _trackToolCall(taskId: string, toolName: string, toolInput: any, parentToolUseId?: string, sessionId?: string): void {
+  _trackToolCall(taskId: string, toolName: string, toolInput: Record<string, unknown>, parentToolUseId?: string, sessionId?: string): void {
     // 获取或创建调用树
     if (!this._callingTrees.has(taskId)) {
       this._callingTrees.set(taskId, {
@@ -379,7 +444,7 @@ class SdkService extends EventEmitter {
    * @param taskId 主任务ID
    * @returns 调用树结构
    */
-  _getCallingTree(taskId: string): any {
+  _getCallingTree(taskId: string): Record<string, unknown> | null {
     const tree = this._callingTrees.get(taskId);
     if (!tree) return null;
 
@@ -831,7 +896,7 @@ ${mergePrompt}
   /**
    * Execute via Anthropic SDK — streaming mode with Agent tool support
    */
-  async execute(taskId: string, agentId: string | null, prompt: string, config: any = {}) {
+  async execute(taskId: string, agentId: string | null, prompt: string, config: ExecutionConfig = {}): Promise<any> {
     // 任务去重检查 - 使用 taskId 作为唯一标识，避免不同工作流实例被去重
     const taskForDedup = {
       taskId: taskId,  // 使用 taskId 而不是任务内容
@@ -857,7 +922,7 @@ ${mergePrompt}
     return executionPromise;
   }
 
-  async _executeWithDedup(taskId: string, agentId: string | null, prompt: string, config: any = {}) {
+  async _executeWithDedup(taskId: string, agentId: string | null, prompt: string, config: ExecutionConfig = {}): Promise<any> {
     const taskForDedup = {
       description: prompt,
       model: config.model,
@@ -943,7 +1008,7 @@ ${mergePrompt}
   /**
    * 写入日志
    */
-  _writeLog(logStream: any, content: string): void {
+  _writeLog(logStream: NodeJS.WritableStream, content: string): void {
     try {
       logStream.write(`[${new Date().toISOString()}] ${content}\n`);
     } catch (e) { /* ignore */ }
@@ -977,7 +1042,7 @@ ${mergePrompt}
     }
   }
 
-  async _executeInternal(taskId: string, agentId: string | null, prompt: string, config: any = {}) {
+  async _executeInternal(taskId: string, agentId: string | null, prompt: string, config: ExecutionConfig = {}): Promise<any> {
     if (config?.workflowId) {
       this._taskWorkflowMap.set(taskId, config.workflowId);
     }
@@ -1013,7 +1078,7 @@ ${mergePrompt}
 
     // Build Anthropic client (all providers use Anthropic Messages API format)
     // 使用互斥锁防止并发调用丢失auth token
-    const clientOpts: any = { apiKey: clientConfig.apiKey };
+    const clientOpts: { apiKey: string; baseURL?: string } = { apiKey: clientConfig.apiKey };
     if (clientConfig.baseUrl) {
       clientOpts.baseURL = clientConfig.baseUrl.replace(/\/+$/, '');
     }
@@ -1113,7 +1178,7 @@ ${mergePrompt}
    * 使用 Claude Agent SDK 执行任务（替代原生 Anthropic API）
    * 解决主Agent不知道子Agent已完成的问题
    */
-  async _executeWithClaudeSdk(taskId: string, agentId: string | null, prompt: string, config: any = {}, retryCount: number = 0) {
+  async _executeWithClaudeSdk(taskId: string, agentId: string | null, prompt: string, config: ExecutionConfig = {}, retryCount: number = 0): Promise<any> {
     if (config?.workflowId) {
       this._taskWorkflowMap.set(taskId, config.workflowId);
     }
@@ -1176,7 +1241,7 @@ ${mergePrompt}
       const { query } = require('@anthropic-ai/claude-agent-sdk');
 
       // 检查是否需要审批节点支持
-      const hasApprovalNode = this._executableNodes.some((n: any) => n.type === 'approval');
+      const hasApprovalNode = this._executableNodes.some(n => n.type === 'approval');
       const pendingApprovals = this._pendingApprovals;
 
       // 获取 Agent 安装的技能
@@ -1185,7 +1250,7 @@ ${mergePrompt}
       const nodeSkills = (config as any)?.skills || (config as any)?.skillNames || [];
       const allSkills = [...new Set([...agentSkills, ...nodeSkills])];
 
-      const queryOptions: any = {
+      const queryOptions: Record<string, unknown> = {
         cwd: workingDir,
         model: resolvedModel,
         systemPrompt: systemPrompt,
@@ -1428,7 +1493,7 @@ ${mergePrompt}
    * PreToolUse Hook 处理器 - 安全拦截和审批支持
    * 根据实现方案文档，这是唯一可以"阻断"和"改写"工具执行的异步拦截器
    */
-  async _handlePreToolUse(taskId: string, input: any, hasApprovalNode: boolean, pendingApprovals: Map<string, any>): Promise<any> {
+  async _handlePreToolUse(taskId: string, input: { tool_name: string; tool_input?: Record<string, unknown>; parent_tool_use_id?: string; session_id?: string }, hasApprovalNode: boolean, pendingApprovals: SdkService['_pendingApprovals']): Promise<Record<string, unknown>> {
     const toolName = input.tool_name;
     const toolInput = input.tool_input || {};
 
@@ -1459,7 +1524,7 @@ ${mergePrompt}
 
     // 1. 安全拦截 - 阻止危险命令
     if (toolName === 'Bash') {
-      const command = toolInput.command || '';
+      const command = String(toolInput.command || '');
       const dangerousPatterns = [
         /rm\s+-rf\s+[\/\\]/,  // rm -rf /
         /mkfs/,                // 格式化磁盘
@@ -1532,7 +1597,7 @@ ${mergePrompt}
   /**
    * 判断是否需要审批
    */
-  _isApprovalRequired(toolName: string, toolInput: any): boolean {
+  _isApprovalRequired(toolName: string, toolInput: Record<string, unknown>): boolean {
     // 审批节点的工具调用需要人工确认
     // 这里可以根据业务逻辑自定义
     return false;
@@ -1807,11 +1872,13 @@ ${mergePrompt}
       }
 
       // 添加技能和 MCP 工具信息
-      if ((nodeInfo.skills || []).length > 0) {
-        sdkSystemPrompt += `\n\n[可用技能]\n${nodeInfo.skills.join('\n')}`;
+      const skills = nodeInfo.skills as string[] | undefined;
+      const mcp = nodeInfo.mcp as string[] | undefined;
+      if (skills && skills.length > 0) {
+        sdkSystemPrompt += `\n\n[可用技能]\n${skills.join('\n')}`;
       }
-      if ((nodeInfo.mcp || []).length > 0) {
-        sdkSystemPrompt += `\n\n[外部工具]\n${nodeInfo.mcp.join('\n')}`;
+      if (mcp && mcp.length > 0) {
+        sdkSystemPrompt += `\n\n[外部工具]\n${mcp.join('\n')}`;
       }
 
       // 添加权限信息到系统提示
@@ -2526,14 +2593,14 @@ ${upstreamContext ? `上游节点输出:\n${upstreamContext}` : '无上游依赖
   /**
    * Build tool definitions including the Agent tool for multi-agent delegation
    */
-  _buildTools(workingDir) {
-    const tools = [];
+  _buildTools(workingDir: string): Record<string, unknown>[] {
+    const tools: Record<string, unknown>[] = [];
 
     // Generate named Agent tools from workflow node registry
     for (const [nodeId, nodeInfo] of Object.entries(this._nodeRegistry)) {
       const toolName = `Agent_${nodeId}`;
-      const skills = nodeInfo.skills || [];
-      const mcp = nodeInfo.mcp || [];
+      const skills = (nodeInfo.skills as string[]) || [];
+      const mcp = (nodeInfo.mcp as string[]) || [];
       const agentType = nodeInfo.agentType || 'general-purpose';
       const typeDesc = agentType === 'Explore' ? '只读探索' : '完整权限';
 

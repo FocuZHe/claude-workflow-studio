@@ -30,11 +30,9 @@ function loadOrCreateApiKey(): string | null {
   return null;
 }
 
-const apiKey = loadOrCreateApiKey();
-if (apiKey) {
-  logger.info(`API key authentication is ENABLED. Key: ${apiKey.substring(0, 8)}...`);
-} else {
-  logger.info('API key authentication is DISABLED (no key configured)');
+// 每次请求动态读取密钥，支持运行时修改
+function getApiKey(): string | null {
+  return loadOrCreateApiKey();
 }
 
 /**
@@ -65,8 +63,11 @@ function authMiddleware(req: any, res: any, next: any): void {
     return next();
   }
 
+  // 动态读取密钥，支持运行时修改
+  const currentKey = getApiKey();
+
   // If no API key is configured, allow all requests
-  if (!apiKey) {
+  if (!currentKey) {
     return next();
   }
 
@@ -83,7 +84,7 @@ function authMiddleware(req: any, res: any, next: any): void {
     return;
   }
 
-  if (providedKey !== apiKey) {
+  if (providedKey !== currentKey) {
     res.status(403).json({
       success: false,
       error: {
@@ -95,13 +96,6 @@ function authMiddleware(req: any, res: any, next: any): void {
   }
 
   next();
-}
-
-/**
- * Return the current API key (for frontend initial setup).
- */
-function getApiKey(): string | null {
-  return apiKey;
 }
 
 module.exports = { authMiddleware, getApiKey };

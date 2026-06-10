@@ -175,7 +175,7 @@ export class WorkflowService {
   static _claudeService: any = null;
   static _pendingApprovals: Map<string, ApprovalEntry> = new Map();
   static _currentRunIds: Map<string, string> = new Map();  // workflowId -> runId（防止并发覆盖）
-  static _activeOrchestrators: Map<string, any> = new Map();  // workflowId -> WorkflowOrchestrator（用于停止工作流时关闭子Agent）
+  static _activeOrchestrators: Map<string, { shutdownAll: () => Promise<void> }> = new Map();  // workflowId -> WorkflowOrchestrator（用于停止工作流时关闭子Agent）
 
   /**
    * Initialize WorkflowService with dependencies
@@ -195,8 +195,7 @@ export class WorkflowService {
    */
   static fixStaleExecutionLogs(): void {
     try {
-      const result = WorkflowModel.findAll({ limit: 99999 });
-      const workflows: WorkflowData[] = Array.isArray(result) ? result : (result.items || []);
+      const workflows: WorkflowData[] = WorkflowModel.getAll();
       let fixedCount = 0;
       let interruptedCount = 0;
 
@@ -297,8 +296,7 @@ export class WorkflowService {
    */
   static resetStuckNodes(): void {
     try {
-      const result = WorkflowModel.findAll({ limit: 99999 });
-      const workflows: WorkflowData[] = Array.isArray(result) ? result : (result.items || []);
+      const workflows: WorkflowData[] = WorkflowModel.getAll();
       let resetCount = 0;
       let interruptCount = 0;
 
@@ -632,7 +630,7 @@ export class WorkflowService {
 
     // Always use Master Agent mode
     logger.info(`Workflow ${id}: using MasterAgent mode (native Agent tool collaboration)`);
-    WorkflowService._executeMasterAgentWithRetry(id, runId, input, workflow, 3).catch((err: Error) => {
+    WorkflowService._executeMasterAgentWithRetry(id, runId, input, workflow, 1).catch((err: Error) => {
       logger.error(`MasterAgent execution error: ${id}`, { runId, error: err.message, stack: err.stack });
       try {
         WorkflowService._failWorkflow(id, runId, err.message);
@@ -943,7 +941,16 @@ export class WorkflowService {
           const pids = output.split('\n').filter((p: string) => p.trim()).map((p: string) => parseInt(p));
           for (const pid of pids) {
             if (pid > 0 && pid !== process.pid) {
-              pidsToKill.push({ pid, info: 'lsof detected' });
+              try {
+                // 验证进程名，只清理 node/python/uvicorn 进程
+                const { stdout: cmdOutput } = await execAsync(
+                  `ps -p ${pid} -o comm=`, { encoding: 'utf-8', timeout: 3000 }
+                );
+                const processName = cmdOutput.trim().toLowerCase();
+                if (processName.includes('node') || processName.includes('python') || processName.includes('uvicorn')) {
+                  pidsToKill.push({ pid, info: processName });
+                }
+              } catch (e) { /* 进程已退出或无权限，忽略 */ }
             }
           }
         } catch (e) { /* ignore */ }
@@ -973,8 +980,7 @@ export class WorkflowService {
   static cleanupStaleSubagentProcesses(): void {
     try {
       // 检查是否有工作流正在运行
-      const result = WorkflowModel.findAll({ limit: 99999 });
-      const workflows: WorkflowData[] = Array.isArray(result) ? result : (result.items || []);
+      const workflows: WorkflowData[] = WorkflowModel.getAll();
       const runningWorkflows = workflows.filter((wf: WorkflowData) =>
         wf.executionStatus === 'running' || wf.status === 'running'
       );

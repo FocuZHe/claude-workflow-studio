@@ -52,7 +52,7 @@
   font-weight: 600;
   font-size: var(--text-md);
   color: var(--accent-cyan);
-  letter-spacing: 0.5px;
+  letter-spacing: -0.02em;
 }
 
 .navbar-brand .logo-icon {
@@ -382,9 +382,10 @@
 }
 
 .nav-item.active {
-  background: var(--accent-cyan-bg);
+  background: var(--accent-cyan-bg-strong);
   color: var(--accent-cyan);
   border: 1px solid var(--accent-cyan-border);
+  box-shadow: var(--glow-subtle);
 }
 
 .nav-item.active::before {
@@ -394,10 +395,11 @@
   top: 50%;
   transform: translateY(-50%);
   width: 3px;
-  height: 60%;
+  height: 0;
   background: var(--accent-cyan);
   border-radius: 0 2px 2px 0;
   box-shadow: 0 0 8px var(--accent-cyan);
+  animation: navLineSlide 0.2s var(--ease-out) forwards;
 }
 
 .nav-icon {
@@ -444,10 +446,12 @@
   position: absolute;
   inset: 0;
   background-image:
-    linear-gradient(rgba(0, 210, 255, 0.02) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(0, 210, 255, 0.02) 1px, transparent 1px);
+    linear-gradient(var(--border-subtle) 1px, transparent 1px),
+    linear-gradient(90deg, var(--border-subtle) 1px, transparent 1px);
   background-size: 40px 40px;
+  opacity: 0.3;
   pointer-events: none;
+  z-index: 0;
 }
 
 /* Page wrapper: fill remaining height inside .main-content flex column */
@@ -456,6 +460,8 @@
   flex-direction: column;
   flex: 1;
   min-height: 0;
+  position: relative;
+  z-index: 1;
 }
 
 /* 终端页面绝对定位，撑满整个内容区域 */
@@ -477,10 +483,12 @@
   position: absolute;
   inset: 0;
   background-image:
-    linear-gradient(rgba(0, 210, 255, 0.02) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(0, 210, 255, 0.02) 1px, transparent 1px);
+    linear-gradient(var(--border-subtle) 1px, transparent 1px),
+    linear-gradient(90deg, var(--border-subtle) 1px, transparent 1px);
   background-size: 40px 40px;
+  opacity: 0.3;
   pointer-events: none;
+  z-index: 0;
 }
 
 /* Page wrapper: fill remaining height inside .main-content flex column */
@@ -489,6 +497,8 @@
   flex-direction: column;
   flex: 1;
   min-height: 0;
+  position: relative;
+  z-index: 1;
 }
 
 .page-header {

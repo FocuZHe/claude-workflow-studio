@@ -944,7 +944,7 @@ Sidebar divided into 4 groups, 16 pages total:
 
 | Module | Description |
 |--------|-------------|
-| **Marketplace** | Skills marketplace (dynamic) + Workflow templates (22 built-in) |
+| **Marketplace** | Skills marketplace (dynamic) + Workflow templates (13 built-in) |
 | **Broadcast** | Event broadcasting and notification management |
 | **Settings** | System configuration, preferences, audit logs, prompt templates, API Key management |
 

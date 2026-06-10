@@ -7,7 +7,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/release-v1.2-blue?style=flat-square" alt="Release">
+  <img src="https://img.shields.io/badge/release-v1.4-blue?style=flat-square" alt="Release">
   <img src="https://img.shields.io/badge/platform-Windows-lightgrey?style=flat-square" alt="Platform">
   <img src="https://img.shields.io/badge/node-%3E%3D18-green?style=flat-square" alt="Node.js">
   <img src="https://img.shields.io/badge/claude--code-CLI-orange?style=flat-square" alt="Claude Code CLI">
@@ -58,8 +58,8 @@ npm start      # 或双击 start.bat
 | 功能 | 说明 |
 |------|------|
 | **双轨闭环架构** | 主Agent（原生API）协调 + 子Agent（SDK）执行，物理隔离防幻觉 |
-| **可视化工作流** | 6 种节点类型（Agent/评估/审批/子工作流），拖拽编排，AI 自然语言生成 |
-| **工作流模板** | 22 个内置模板，覆盖代码审查、Bug 修复、文档生成、安全审计等场景 |
+| **可视化工作流** | 7 种节点类型（Agent/评估/审批/条件分支/子工作流），拖拽编排，AI 自然语言生成 |
+| **工作流模板** | 13 个内置模板，覆盖代码审查、Bug 修复、文档生成、安全审计等场景 |
 | **技能市场** | 丰富的技能库，安装后自动创建 SKILL.md 文件，SDK 自动发现 |
 | **自治判断节点** | AI 审查代码/内容，返回 JSON 格式 pass/fail，支持自愈循环 |
 | **人工审批节点** | 暂停等待人工审核，支持通过/拒绝，拒绝后可回退修改 |
@@ -85,6 +85,7 @@ npm start      # 或双击 start.bat
 | **Agent** | 调用 AI 执行任务 |
 | **自治判断** | AI 审查代码/内容，返回 JSON {pass, reason}，支持自愈循环 |
 | **人工审批** | 暂停等待用户审批，支持通过/拒绝 |
+| **条件分支** | 根据上游输出判断，选择一条分支执行 |
 | **子工作流** | 引用其他工作流，内联执行 |
 | **结束** | 汇总最终结果 |
 

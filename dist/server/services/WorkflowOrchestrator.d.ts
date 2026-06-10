@@ -72,7 +72,7 @@ export declare class WorkflowOrchestrator {
     private currentRunId;
     private agentLimit;
     private gitLockLimit;
-    constructor(workspaceRoot: string, stateStore: any, logger: any, broadcastService?: any);
+    constructor(workspaceRoot: string, stateStore: WorkflowOrchestrator['stateStore'], logger: WorkflowOrchestrator['logger'], broadcastService?: WorkflowOrchestrator['broadcastService']);
     /**
      * 启动主Agent指挥官（手动消息循环版）
      *

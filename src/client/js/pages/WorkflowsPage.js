@@ -117,7 +117,7 @@ window.WorkflowsPage = (() => {
     }
     async function loadWorkflows() {
         try {
-            const res = await API.getWorkflows({ limit: 9999 });
+            const res = await API.getWorkflows({ limit: 500 });
             const d = res.data;
             workflows = Array.isArray(d) ? d : (d?.items || []);
             // 通知其他页面工作流数据已更新
@@ -877,7 +877,7 @@ window.WorkflowsPage = (() => {
         // Load all workflows for selection
         let allWfs = [];
         try {
-            const res = await API.getWorkflows({ limit: 9999 });
+            const res = await API.getWorkflows({ limit: 500 });
             allWfs = (res.data?.items || res.data || []).filter((w) => w.id !== workflow.id);
         }
         catch (e) { /* ignore */ }
@@ -1718,6 +1718,8 @@ window.WorkflowsPage = (() => {
         if (!_selectionMode) {
             _selectedIds.clear();
             removeBatchActionBar();
+        } else {
+            showBatchActionBar();
         }
         renderContent();
     }

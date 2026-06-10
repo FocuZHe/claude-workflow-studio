@@ -7,7 +7,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/release-v1.2-blue?style=flat-square" alt="Release">
+  <img src="https://img.shields.io/badge/release-v1.4-blue?style=flat-square" alt="Release">
   <img src="https://img.shields.io/badge/platform-Windows-lightgrey?style=flat-square" alt="Platform">
   <img src="https://img.shields.io/badge/node-%3E%3D18-green?style=flat-square" alt="Node.js">
   <img src="https://img.shields.io/badge/claude--code-CLI-orange?style=flat-square" alt="Claude Code CLI">
