@@ -1063,7 +1063,12 @@ workspace/<wsId>/
 ## 二十、安全与鉴权
 
 - **API Key 鉴权**：首次启动自动生成，AES-256-GCM 加密存储
-- **三层限流**：全局 600 次/分钟、写操作 200 次/10 秒、鉴权 10 次/分钟
+- **API Key 端点本地限制**：`/api/auth/key` 仅允许 `127.0.0.1` 访问，防止远程获取明文密钥
+- **速率限制**：全局 200 次/分钟，防止暴力攻击和 DoS
+- **安全响应头**：
+  - `X-Content-Type-Options: nosniff` — 防止 MIME 类型嗅探
+  - `X-Frame-Options: DENY` — 防止点击劫持
+  - `X-XSS-Protection: 1; mode=block` — XSS 防护
 - **工作区沙箱**：`--permission-mode acceptEdits` 限制工作区内写入
 - **路径穿越防护**：所有文件路径通过 resolvePath 校验
 - **Agent 内存沙箱**：每 10 秒监测 RSS，超过 2GB 自动终止进程

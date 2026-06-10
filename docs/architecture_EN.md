@@ -1057,7 +1057,12 @@ workspace/<wsId>/
 ## 20. Security and Authentication
 
 - **API Key Authentication**: Auto-generated on first startup, AES-256-GCM encrypted storage
-- **Three-Tier Rate Limiting**: Global 600 requests/minute, write operations 200 requests/10 seconds, authentication 10 requests/minute
+- **API Key Endpoint Local Restriction**: `/api/auth/key` only allows `127.0.0.1` access, prevents remote retrieval of plaintext keys
+- **Rate Limiting**: Global 200 requests/minute, prevents brute-force attacks and DoS
+- **Security Response Headers**:
+  - `X-Content-Type-Options: nosniff` — Prevents MIME type sniffing
+  - `X-Frame-Options: DENY` — Prevents clickjacking
+  - `X-XSS-Protection: 1; mode=block` — XSS protection
 - **Workspace Sandbox**: `--permission-mode acceptEdits` restricts writes to workspace
 - **Path Traversal Prevention**: All file paths validated via resolvePath
 - **Agent Memory Sandbox**: Monitor RSS every 10 seconds, auto-terminate process if exceeds 2GB
