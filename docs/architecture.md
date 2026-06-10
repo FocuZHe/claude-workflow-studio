@@ -433,20 +433,26 @@ workspace/<wsId>/.checkpoint/
 
 ### 7.1 审批节点
 
-审批节点是**真实的 WebSocket 往返**：
+审批节点由**编排器级别拦截**，不依赖模型调用工具：
 
 ```
 执行到达审批节点
-  → 节点状态设为 waiting_approval
+  → 编排器检测到审批节点（跳过模型指令生成）
+  → 生成 UUID 审批ID
   → WebSocket 广播 workflow.approvalRequested 事件
-  → 前端弹出审批弹窗
+  → 前端弹出审批弹窗（支持输入拒绝原因）
   → 后端创建 Promise，等待用户操作
   → 超时保护：可配置（默认 1 小时），超时自动通过
 
 用户操作：
-  ├── 通过 → Promise resolve → 节点标记 completed → 继续下游
-  └── 拒绝 → Promise reject → 节点标记 failed → 可根据配置跳过
+  ├── 通过 → Promise resolve → 节点标记 completed → 继续执行
+  └── 拒绝 → Promise resolve（非 reject）→ 反馈传回主 Agent → 主 Agent 分析原因 → 重新执行上游节点
 ```
+
+**关键设计：**
+- 审批节点不生成 Agent 指令（`buildWorkflowInstructions` 跳过 `type === 'approval'`）
+- 使用独立的审批 Map（`_approvalResolvers`），避免 WorkflowService 的 reject 机制导致工作流失败
+- 拒绝时将反馈作为用户消息传回主 Agent，允许重试修改
 
 **超时配置：**
 - 前端：工作流构建器 → 审批节点 → 超时设置（秒）

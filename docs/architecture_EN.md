@@ -424,20 +424,26 @@ Server startup
 
 ### 7.1 Approval Node
 
-Approval nodes are **real WebSocket round-trips**:
+Approval nodes are **intercepted at the orchestrator level**, not dependent on model tool calls:
 
 ```
 Execution reaches approval node
-  → Node status set to waiting_approval
+  → Orchestrator detects approval node (skips model instruction generation)
+  → Generate UUID approval ID
   → WebSocket broadcast workflow.approvalRequested event
-  → Frontend popup approval dialog
+  → Frontend popup approval dialog (supports reject reason input)
   → Backend creates Promise, waits for user action
   → Timeout protection: configurable (default 1 hour), auto-approve on timeout
 
 User action:
-  ├── Approve → Promise resolve → Node marked completed → Continue downstream
-  └── Reject → Promise reject → Node marked failed → Can skip based on configuration
+  ├── Approve → Promise resolve → Node marked completed → Continue execution
+  └── Reject → Promise resolve (not reject) → Feedback passed to main Agent → Main Agent analyzes reason → Re-execute upstream nodes
 ```
+
+**Key Design:**
+- Approval nodes do not generate Agent instructions (`buildWorkflowInstructions` skips `type === 'approval'`)
+- Uses independent approval Map (`_approvalResolvers`), avoiding WorkflowService's reject mechanism causing workflow failure
+- On rejection, feedback is passed back to main Agent as user message, allowing retry and modification
 
 **Timeout Configuration:**
 - Frontend: Workflow builder → Approval node → Timeout setting (seconds)

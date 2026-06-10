@@ -205,6 +205,8 @@ class WorkflowOrchestrator {
     broadcastService; // 广播服务
     currentWorkflowId = ''; // 当前工作流ID
     currentRunId = ''; // 当前运行ID
+    currentWorkflow = null; // 当前工作流数据
+    _approvalResolvers = null; // 独立的审批系统
     agentLimit = (0, p_limit_1.default)(5); // 运行并发硬限制
     gitLockLimit = (0, p_limit_1.default)(1); // Git 写操作串行，杜绝 index.lock 并发冲突
     constructor(workspaceRoot, stateStore, logger, broadcastService) {
@@ -220,6 +222,98 @@ class WorkflowOrchestrator {
         this.broadcastService = broadcastService;
     }
     /**
+     * 处理审批节点（编排器级别拦截）
+     * 遇到审批节点时暂停执行，等待用户审批
+     * 返回 { passed: boolean, feedback?: string }
+     */
+    async handleApprovalNode(nodeId, nodeLabel) {
+        this.logger.info(`[Orchestrator] 🛑 遇到审批节点: ${nodeLabel} (${nodeId})`);
+        // 生成审批ID
+        const approvalId = require('uuid').v4();
+        this.logger.info(`[Orchestrator] 审批ID: ${approvalId}`);
+        // 广播审批请求
+        if (this.broadcastService) {
+            this.broadcastService.broadcast('workflow.approvalRequested', {
+                workflowId: this.currentWorkflowId,
+                runId: this.currentRunId,
+                approvalRequestId: approvalId,
+                nodeId: nodeId,
+                title: nodeLabel || '审批请求',
+                description: '工作流执行到审批节点，等待用户确认',
+                timestamp: new Date().toISOString()
+            });
+        }
+        // 更新节点状态为运行中
+        try {
+            const WorkflowModel = require('../models/Workflow');
+            WorkflowModel.updateNodeStatus(this.currentWorkflowId, nodeId, 'running');
+        }
+        catch (e) { /* 忽略 */ }
+        // 挂起等待审批结果（使用独立的审批系统，不依赖WorkflowService的reject机制）
+        const approvalResult = await new Promise((resolve) => {
+            // 使用独立的审批Map，避免WorkflowService的reject机制
+            if (!this._approvalResolvers) {
+                this._approvalResolvers = new Map();
+            }
+            this._approvalResolvers.set(approvalId, {
+                resolve,
+                timer: setTimeout(() => {
+                    this.logger.warn(`[Orchestrator] 审批超时，自动通过`);
+                    this._approvalResolvers?.delete(approvalId);
+                    resolve({ decision: 'approve', comment: '' });
+                }, 3600 * 1000) // 1小时超时
+            });
+        });
+        // 更新节点状态
+        try {
+            const WorkflowModel = require('../models/Workflow');
+            if (approvalResult.decision === 'approve') {
+                WorkflowModel.updateNodeStatus(this.currentWorkflowId, nodeId, 'completed', '用户审批通过');
+                this.logger.info(`[Orchestrator] ✅ 审批通过: ${nodeLabel}`);
+                return { passed: true };
+            }
+            else {
+                WorkflowModel.updateNodeStatus(this.currentWorkflowId, nodeId, 'failed', approvalResult.comment || '用户拒绝');
+                this.logger.info(`[Orchestrator] ❌ 审批拒绝: ${nodeLabel}`);
+                return { passed: false, feedback: approvalResult.comment || '用户拒绝' };
+            }
+        }
+        catch (e) { /* 忽略 */ }
+        return { passed: approvalResult.decision === 'approve', feedback: approvalResult.comment };
+    }
+    /**
+     * 检查并处理工作流中的审批节点
+     * 返回 { passed: boolean, feedback?: string }
+     */
+    async processApprovalNodes(workflow, processedNodes) {
+        if (!workflow.nodes)
+            return { passed: true };
+        for (const node of workflow.nodes) {
+            if (node.type === 'approval' && !processedNodes.has(node.id)) {
+                const result = await this.handleApprovalNode(node.id, node.label || '审批节点');
+                processedNodes.add(node.id);
+                if (!result.passed) {
+                    return { passed: false, feedback: result.feedback }; // 审批被拒绝
+                }
+            }
+        }
+        return { passed: true }; // 所有审批通过
+    }
+    /**
+     * 处理审批决策（由API调用）
+     */
+    handleApprovalDecision(approvalId, decision, comment) {
+        if (!this._approvalResolvers)
+            return false;
+        const pending = this._approvalResolvers.get(approvalId);
+        if (!pending)
+            return false;
+        clearTimeout(pending.timer);
+        this._approvalResolvers.delete(approvalId);
+        pending.resolve({ decision, comment });
+        return true;
+    }
+    /**
      * 启动主Agent指挥官（手动消息循环版）
      *
      * 使用稳定的 anthropic.messages.create() API，手动管理 tool_use/tool_result 循环
@@ -229,6 +323,7 @@ class WorkflowOrchestrator {
         this.logger.info(`[Master] 启动主 Agent 指挥官。工作意图: "${userIntent}"`);
         this.currentWorkflowId = workflow.id;
         this.currentRunId = runId || '';
+        this.currentWorkflow = workflow;
         await this.setupLocalEnvironment();
         // 构建工作流执行指令
         const workflowInstructions = this.buildWorkflowInstructions(workflow, userIntent);
@@ -253,28 +348,6 @@ class WorkflowOrchestrator {
                     required: ['agent_type', 'prompt']
                 }
             },
-            {
-                name: 'request_approval',
-                description: '请求人工审批。调用此工具后，工作流将暂停执行，等待用户审批。',
-                input_schema: {
-                    type: 'object',
-                    properties: {
-                        title: {
-                            type: 'string',
-                            description: '审批标题'
-                        },
-                        description: {
-                            type: 'string',
-                            description: '审批描述'
-                        },
-                        content: {
-                            type: 'string',
-                            description: '需要审批的内容'
-                        }
-                    },
-                    required: ['title', 'content']
-                }
-            }
         ];
         try {
             const systemPrompt = `<identity>
@@ -363,6 +436,19 @@ ${workflowInstructions}
             const nodeResults = new Map();
             let iteration = 0;
             const maxIterations = 50;
+            // 预处理：先处理所有审批节点
+            const processedApprovalNodes = new Set();
+            const approvalResult = await this.processApprovalNodes(workflow, processedApprovalNodes);
+            if (!approvalResult.passed) {
+                // 审批被拒绝，将反馈传回给主 Agent
+                const approvalFeedback = approvalResult.feedback || '用户拒绝了审批';
+                this.logger.info(`[Master] 审批被拒绝，反馈: ${approvalFeedback}`);
+                // 将拒绝反馈作为用户消息加入对话
+                messages.push({
+                    role: 'user',
+                    content: `【审批被拒绝】原因: ${approvalFeedback}\n\n请分析拒绝原因，决定是否需要重新执行上游节点进行修改。如果需要修改，请调用 call_sub_agent 重新执行相关任务。`
+                });
+            }
             while (keepRunning && iteration < maxIterations && !this.stopped) {
                 // 每轮开始前检查停止标志
                 if (this.stopped) {
@@ -405,6 +491,19 @@ ${workflowInstructions}
                                 // 物理执行子 Agent 进程（真实执行，无法伪造）
                                 const realResult = await this.executeRoutedStep(agent_type, prompt);
                                 nodeResults.set(agent_type, realResult);
+                                // 实时更新节点状态
+                                try {
+                                    const WorkflowModel = require('../models/Workflow');
+                                    WorkflowModel.updateNodeStatus(this.currentWorkflowId, agent_type, 'completed', realResult.substring(0, 500));
+                                    if (this.broadcastService) {
+                                        this.broadcastService.broadcast('workflow.nodeStatusChanged', {
+                                            workflowId: this.currentWorkflowId,
+                                            nodeId: agent_type,
+                                            status: 'completed'
+                                        });
+                                    }
+                                }
+                                catch (e) { /* 非关键路径，忽略错误 */ }
                                 return {
                                     type: 'tool_result',
                                     tool_use_id: toolUseId,
@@ -419,54 +518,6 @@ ${workflowInstructions}
                                     tool_use_id: toolUseId,
                                     content: `【子 Agent ${agent_type} 执行失败】：${err.message}`,
                                     is_error: true
-                                };
-                            }
-                        }
-                        if (name === 'request_approval') {
-                            const { title, description, content } = toolInput;
-                            this.logger.info(`[Master] 🛑 请求人工审批: ${title}`);
-                            // 使用 WorkflowService 的审批系统
-                            const WorkflowService = require('./WorkflowService');
-                            const approvalId = `${this.currentWorkflowId}_${Date.now()}`;
-                            // 广播审批请求（包含 requestId）
-                            if (this.broadcastService) {
-                                this.broadcastService.broadcast('workflow.approvalRequested', {
-                                    workflowId: this.currentWorkflowId,
-                                    runId: this.currentRunId,
-                                    requestId: approvalId,
-                                    title,
-                                    description,
-                                    content,
-                                    timestamp: new Date().toISOString()
-                                });
-                            }
-                            // 挂起等待审批结果
-                            const approvalResult = await new Promise((resolve, reject) => {
-                                // 注册到 WorkflowService 的审批系统
-                                WorkflowService._pendingApprovals.set(approvalId, {
-                                    resolve,
-                                    reject,
-                                    timer: setTimeout(() => {
-                                        this.logger.warn(`[Master] 审批超时，自动通过`);
-                                        WorkflowService._pendingApprovals.delete(approvalId);
-                                        resolve({ decision: 'approve', comment: '' });
-                                    }, 3600 * 1000)
-                                });
-                            });
-                            if (approvalResult.decision === 'approve') {
-                                this.logger.info(`[Master] ✅ 审批通过`);
-                                return {
-                                    type: 'tool_result',
-                                    tool_use_id: toolUseId,
-                                    content: '【审批通过】用户已批准，继续执行。'
-                                };
-                            }
-                            else {
-                                this.logger.info(`[Master] ❌ 审批拒绝: ${approvalResult.comment}`);
-                                return {
-                                    type: 'tool_result',
-                                    tool_use_id: toolUseId,
-                                    content: `【审批拒绝】用户拒绝了请求。原因: ${approvalResult.comment || ''}`
                                 };
                             }
                         }
@@ -568,7 +619,7 @@ ${workflowInstructions}
             const node = nodeById[nodeId];
             if (!node)
                 continue;
-            if (node.type === 'start' || node.type === 'end')
+            if (node.type === 'start' || node.type === 'end' || node.type === 'approval')
                 continue;
             if (processedNodes.has(nodeId))
                 continue;
@@ -697,22 +748,7 @@ ${subInstructions}`);
                 processedNodes.add(node.id);
             }
         }
-        // 添加人工审批节点支持
-        for (const node of workflow.nodes) {
-            if (node.type === 'approval' && !processedNodes.has(node.id)) {
-                stepNum++;
-                const approvalTitle = node.config?.approvalTitle || node.label || '审批请求';
-                const approvalDesc = node.config?.approvalDescription || '';
-                steps.push(`步骤 ${stepNum}: **${node.label || node.type}** (${node.type}) [人工审批节点]
-【必须调用 request_approval 工具请求人工审批】
-- title: "${approvalTitle}"
-- description: "${approvalDesc}"
-- content: 将上游节点的输出或当前阶段的成果作为审核内容
-
-⚠️ 重要：调用 request_approval 后暂停执行，等待用户审批。如果通过则继续，如果拒绝则记录原因并调整。`);
-                processedNodes.add(node.id);
-            }
-        }
+        // 审批节点由编排器直接处理，不加入模型指令
         return `
 === 用户任务 ===
 ${userInput}

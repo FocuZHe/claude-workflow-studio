@@ -1460,13 +1460,24 @@ router.post('/approval/respond', (req, res) => {
         if (!['approve', 'reject'].includes(decision)) {
             return res.status(400).json({ success: false, error: 'decision must be approve or reject' });
         }
-        // Try SDK mode first, then topological mode
+        // Try SDK mode first, then topological mode, then orchestrator mode
         let handled = false;
         if (global.__sdkService) {
             handled = global.__sdkService.handleApprovalDecision(requestId, decision, comment);
         }
         if (!handled) {
             handled = WorkflowService.handleApprovalDecision(requestId, decision, comment);
+        }
+        // 尝试通过 orchestrator 处理（编排器级别的审批）
+        if (!handled) {
+            const activeOrchestrators = WorkflowService._activeOrchestrators;
+            for (const [workflowId, orchestrator] of activeOrchestrators) {
+                if (typeof orchestrator.handleApprovalDecision === 'function') {
+                    handled = orchestrator.handleApprovalDecision(requestId, decision, comment);
+                    if (handled)
+                        break;
+                }
+            }
         }
         res.json({ success: true, data: { handled } });
     }

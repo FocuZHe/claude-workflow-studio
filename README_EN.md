@@ -62,7 +62,7 @@ npm start      # or double-click start.bat
 | **Workflow Templates** | 22 built-in templates: code review, bug fix, doc generation, security audit, etc. |
 | **Skills Marketplace** | Rich skill library, auto-creates SKILL.md files on install, SDK auto-discovery |
 | **Autonomous Evaluator** | AI reviews code/content, returns JSON {pass, reason}, supports self-healing loop |
-| **Human Approval Gate** | Pause for human review, support approve/reject, reject triggers rollback |
+| **Human Approval Gate** | Orchestrator-level interception, pause for human review, support approve/reject, reject automatically passes feedback to main Agent for retry |
 | **Real-time Streaming** | All sub-agent output streamed via WebSocket (50ms buffer) |
 | **Checkpoint/Resume** | Per-node checkpoints, resume from breakpoint after crash or pause |
 | **Memory System** | Per-workspace isolation, toggle control, cross-workflow sharing, shared data pool |

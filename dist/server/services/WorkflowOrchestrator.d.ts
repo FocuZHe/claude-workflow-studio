@@ -70,9 +70,26 @@ export declare class WorkflowOrchestrator {
     private broadcastService;
     private currentWorkflowId;
     private currentRunId;
+    private currentWorkflow;
+    private _approvalResolvers;
     private agentLimit;
     private gitLockLimit;
     constructor(workspaceRoot: string, stateStore: WorkflowOrchestrator['stateStore'], logger: WorkflowOrchestrator['logger'], broadcastService?: WorkflowOrchestrator['broadcastService']);
+    /**
+     * 处理审批节点（编排器级别拦截）
+     * 遇到审批节点时暂停执行，等待用户审批
+     * 返回 { passed: boolean, feedback?: string }
+     */
+    private handleApprovalNode;
+    /**
+     * 检查并处理工作流中的审批节点
+     * 返回 { passed: boolean, feedback?: string }
+     */
+    private processApprovalNodes;
+    /**
+     * 处理审批决策（由API调用）
+     */
+    handleApprovalDecision(approvalId: string, decision: string, comment?: string): boolean;
     /**
      * 启动主Agent指挥官（手动消息循环版）
      *

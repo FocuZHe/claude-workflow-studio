@@ -76,8 +76,8 @@ window.NotificationManager = (() => {
         });
     }
     function showApprovalModal(payload) {
-        const { workflowId, requestId, title, description, context, timeout } = payload;
-        const approvalRequestId = requestId; // 兼容两种字段名
+        const { workflowId, requestId, approvalRequestId: approvalRequestIdAlt, title, description, context, timeout } = payload;
+        const approvalRequestId = requestId || approvalRequestIdAlt; // 兼容两种字段名
         const esc = (s) => { const d = document.createElement('div'); d.textContent = s || ''; return d.innerHTML; };
         Modal.open({
             title: `审核: ${title || '请求'}`,
