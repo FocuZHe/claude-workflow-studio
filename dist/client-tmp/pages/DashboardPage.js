@@ -19,7 +19,7 @@ window.DashboardPage = (() => {
           <div style="font-size:14px;font-weight:600;color:var(--accent-cyan);margin-bottom:4px;">Claude Workflow Studio</div>
           <div style="font-size:13px;color:var(--text-secondary);">通过拖拽式工作流编排多 Agent 协作，支持并行/串行执行、断点续传、Agent 记忆、知识库和技能管理。</div>
         </div>
-        <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:var(--space-4);" id="stats-grid">
+        <div class="stats-grid" id="stats-grid">
           ${renderStatCard('agents', '--', '智能体', 'cyan')}
           ${renderStatCard('workflow', '--', '活跃工作流', 'amber')}
           ${renderStatCard('tasks', '--', '待处理任务', 'green')}
@@ -78,9 +78,9 @@ window.DashboardPage = (() => {
         }, 0);
         _bindRealtimeUpdates();
         // Load data async
-        loadStats().catch(() => { });
+        loadStats().catch((e) => { Toast.error('加载统计数据失败: ' + (e.message || e)); });
         checkClaudeStatus().catch(() => { });
-        loadResources().catch(() => { });
+        loadResources().catch((e) => { Toast.error('加载资源信息失败: ' + (e.message || e)); });
         // 系统资源每5秒刷新一次
         _resourceRefreshTimer = setInterval(() => loadResources(), 5000);
     }
@@ -100,6 +100,24 @@ window.DashboardPage = (() => {
         <div class="stat-label">${label}</div>
       </div>
     `;
+    }
+    // 数字跳动动画
+    function animateNumber(el, target) {
+        const raw = el.textContent.trim();
+        const current = raw === '--' || raw === '' ? 0 : (parseInt(raw) || 0);
+        if (current === target && raw !== '--' && raw !== '')
+            return;
+        const duration = 400;
+        const start = performance.now();
+        function tick(now) {
+            const elapsed = now - start;
+            const progress = Math.min(elapsed / duration, 1);
+            const eased = 1 - Math.pow(1 - progress, 3); // easeOutCubic
+            el.textContent = String(Math.round(current + (target - current) * eased));
+            if (progress < 1)
+                requestAnimationFrame(tick);
+        }
+        requestAnimationFrame(tick);
     }
     let _serverStartTime = 0;
     let _uptimeInterval = null;
@@ -171,15 +189,15 @@ window.DashboardPage = (() => {
             const chatStat = document.querySelector('.stat-value[data-stat="发起对话"]');
             const termStat = document.querySelector('.stat-value[data-stat="开启终端"]');
             if (agentStat)
-                agentStat.textContent = String(agents.length);
+                animateNumber(agentStat, agents.length);
             if (workflowStat)
-                workflowStat.textContent = String(workflows.filter((w) => w.status === 'running').length);
+                animateNumber(workflowStat, workflows.filter((w) => w.status === 'running').length);
             if (taskStat)
-                taskStat.textContent = String(tasks.filter((t) => t.status === 'pending').length);
+                animateNumber(taskStat, tasks.filter((t) => t.status === 'pending').length);
             if (chatStat)
-                chatStat.textContent = String(chatCount);
+                animateNumber(chatStat, chatCount);
             if (termStat)
-                termStat.textContent = String(termCount);
+                animateNumber(termStat, termCount);
             // Recent activity
             const activities = [];
             agents.slice(-3).forEach((a) => activities.push({ text: `智能体 "${a.name}" (${a.role}) 已创建`, time: a.createdAt }));
@@ -244,6 +262,7 @@ window.DashboardPage = (() => {
         }
         catch (e) {
             console.warn('加载资源信息失败:', e.message);
+            Toast.error('加载资源信息失败: ' + (e.message || e));
         }
     }
     function renderResourceBar(label, pct, detail) {

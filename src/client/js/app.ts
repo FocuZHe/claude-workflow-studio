@@ -10,6 +10,7 @@
   (Router as any).register('/agents', () => (AgentsPage as any).render());
   (Router as any).register('/workflows', () => (WorkflowsPage as any).render());
   (Router as any).register('/tasks', () => (TasksPage as any).render());
+  (Router as any).register('/task-queues', () => (TaskQueuePage as any).render());
   (Router as any).register('/files', () => (FilesPage as any).render());
   (Router as any).register('/workspaces', () => (Router as any).navigate('/files'));
   (Router as any).register('/broadcast', () => (BroadcastPage as any).render());
@@ -23,6 +24,7 @@
   (Router as any).register('/memory', () => (MemoryPage as any).render());
   (Router as any).register('/knowledge', () => (KnowledgePage as any).render());
   (Router as any).register('/analytics', () => (AnalyticsPage as any).render());
+  (Router as any).register('/safety', () => (SafetyPage as any).render());
 
   // Market page with tabs
   function renderMarketPage(): void {
@@ -71,6 +73,7 @@
       '/agents': () => (AgentsPage as any).cleanup?.(),
       '/workflows': () => (WorkflowsPage as any).cleanup?.(),
       '/tasks': () => (TasksPage as any).cleanup?.(),
+      '/task-queues': () => (TaskQueuePage as any).cleanup?.(),
       '/broadcast': () => (BroadcastPage as any).cleanup?.(),
       '/files': () => (FilesPage as any).cleanup?.(),
       '/history': () => (HistoryPage as any).cleanup?.(),
@@ -81,6 +84,7 @@
       '/memory': () => (MemoryPage as any).cleanup?.(),
       '/knowledge': () => (KnowledgePage as any).cleanup?.(),
       '/analytics': () => (AnalyticsPage as any).cleanup?.(),
+      '/safety': () => (SafetyPage as any).cleanup?.(),
     };
     if (previousPage && cleanupMap[previousPage]) {
       cleanupMap[previousPage]();

@@ -23,6 +23,7 @@ window.WorkflowCanvas = (() => {
     let _onWindowMouseMove = null;
     let _onWindowMouseUp = null;
     let _onEdit = null;
+    let _onLayoutChange = null;
     const NODE_W = 200;
     const NODE_H = 80;
     const STATUS_CONFIG = {
@@ -266,7 +267,7 @@ window.WorkflowCanvas = (() => {
                     const node = nodes.find(n => n.id === dragging);
                     if (node) {
                         node.position = { x: Math.max(0, x), y: Math.max(0, y) };
-                        _onEdit?.();
+                        _onLayoutChange?.();
                         renderAll();
                     }
                     dragAnimFrame = null;
@@ -283,7 +284,7 @@ window.WorkflowCanvas = (() => {
                     if (edge) {
                         edge.bendOffset = draggingEdge.startBend + deltaY;
                         draggingEdge.didDrag = true;
-                        _onEdit?.();
+                        _onLayoutChange?.();
                         renderEdges();
                     }
                     dragAnimFrame = null;
@@ -1957,6 +1958,7 @@ window.WorkflowCanvas = (() => {
         updateNodeStatus, setExecutionData, showNodeDetail,
         loadWorkflow, zoomIn, zoomOut, zoomReset, cleanup,
         showErrorDetailPanel,
-        setOnEdit(fn) { _onEdit = fn; }
+        setOnEdit(fn) { _onEdit = fn; },
+        setOnLayoutChange(fn) { _onLayoutChange = fn; }
     };
 })();

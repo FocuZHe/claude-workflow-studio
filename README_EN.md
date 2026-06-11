@@ -7,7 +7,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/release-v1.4-blue?style=flat-square" alt="Release">
+  <img src="https://img.shields.io/badge/release-v1.5-blue?style=flat-square" alt="Release">
   <img src="https://img.shields.io/badge/platform-Windows-lightgrey?style=flat-square" alt="Platform">
   <img src="https://img.shields.io/badge/node-%3E%3D18-green?style=flat-square" alt="Node.js">
   <img src="https://img.shields.io/badge/claude--code-CLI-orange?style=flat-square" alt="Claude Code CLI">
@@ -58,8 +58,8 @@ npm start      # or double-click start.bat
 | Feature | Description |
 |---------|-------------|
 | **Double-Loop Architecture** | Master Agent (Native API) coordinates + Sub Agent (SDK) executes, physical isolation prevents hallucination |
-| **Visual Workflows** | 6 node types (Agent/Evaluator/Approval/Sub-workflow), drag-and-drop editor, AI workflow generation |
-| **Workflow Templates** | 22 built-in templates: code review, bug fix, doc generation, security audit, etc. |
+| **Visual Workflows** | 6 node types (Agent/Evaluator/Approval/Condition/Sub-workflow), drag-and-drop editor, AI workflow generation |
+| **Workflow Templates** | 17 built-in templates: code review, bug fix, doc generation, security audit, etc. |
 | **Skills Marketplace** | Rich skill library, auto-creates SKILL.md files on install, SDK auto-discovery |
 | **Autonomous Evaluator** | AI reviews code/content, returns JSON {pass, reason}, supports self-healing loop |
 | **Human Approval Gate** | Orchestrator-level interception, pause for human review, support approve/reject, reject automatically passes feedback to main Agent for retry |
@@ -85,6 +85,7 @@ npm start      # or double-click start.bat
 | **Agent** | Execute task via AI |
 | **Evaluator** | AI reviews code/content, returns JSON {pass, reason}, supports self-healing loop |
 | **Approval** | Pause for human review, support approve/reject |
+| **Condition** | Branch based on upstream output, choose one path to execute |
 | **Sub-workflow** | Reference another workflow, inline execution |
 | **End** | Produce final result |
 

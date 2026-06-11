@@ -924,7 +924,7 @@ Sidebar divided into 4 groups, 16 pages total:
 |--------|-------------|
 | **Dashboard** | Dashboard: CPU/memory real-time sampling, agent count, active workflows, pending tasks, chat/terminal session count (5 SVG icon stat cards). Supports dark/light theme switching |
 | **Agents** | Create and manage AI Agents, configure model (opus/sonnet/haiku aliases), system prompt, temperature, tool permissions, role presets |
-| **Workflows** | Visual drag-and-drop orchestration, supports 8 node types (incl. conditional branching), AI creation, batch clone, flowchart import/export, memory transfer, knowledge injection |
+| **Workflows** | Visual drag-and-drop orchestration, supports 6 node types (incl. conditional branching), AI creation, batch clone, flowchart import/export, memory transfer, knowledge injection |
 | **Files** | Workspace file tree browsing, file preview/edit, create files/folders, workspace management |
 | **Tasks** | Create/execute/manage tasks, associate workflows, task queue batch execution, real-time status updates |
 
@@ -950,9 +950,76 @@ Sidebar divided into 4 groups, 16 pages total:
 
 | Module | Description |
 |--------|-------------|
-| **Marketplace** | Skills marketplace (dynamic) + Workflow templates (13 built-in) |
+| **Marketplace** | Skills marketplace (dynamic) + Workflow templates (17 built-in) |
 | **Broadcast** | Event broadcasting and notification management |
 | **Settings** | System configuration, preferences, audit logs, prompt templates, API Key management |
+
+---
+
+### Core Service Implementation Details
+
+#### TaskService — Task Lifecycle Management
+
+| Feature | Description |
+|---------|-------------|
+| State Machine | pending → running → completed/failed/cancelled/paused |
+| Priority | low / medium / high / critical |
+| Execution Mode | Single task or associated workflow execution |
+| Auto Repair | Auto-switch to fallback model on token/rate errors |
+| Concurrency Control | Prevent duplicate task execution |
+| Timeout | Default 30 minutes, customizable |
+| Real-time Broadcast | Status changes pushed via WebSocket |
+
+#### TaskQueueService — Task Queue Management
+
+| Feature | Description |
+|---------|-------------|
+| Queue States | idle / running / paused / completed / cancelled |
+| Batch Execution | Execute in priority + time order |
+| Pause/Resume | Support pausing and resuming queue |
+| State Broadcast | Queue events pushed via `queue.{event}` |
+| Event Types | started / paused / resumed / completed / failed / cancelled |
+
+#### ChatService — AI Chat Service
+
+| Feature | Description |
+|---------|-------------|
+| Engine | Claude Agent SDK (query() calls) |
+| Session Management | Create/archive/search sessions |
+| Context Control | maxMessages / maxTokens / summarizeOld |
+| Streaming | Real-time token push |
+| Session Reuse | Support resuming existing sessions |
+| Session Persistence | SDK session ID persisted to ChatSession, recoverable after server restart |
+| History Recovery | When SDK session unavailable, automatically includes history in prompt |
+| Workspace Isolation | Each chat runs in isolated workspace |
+
+#### TerminalService — PTY Terminal Service
+
+| Feature | Description |
+|---------|-------------|
+| Implementation | node-pty real PTY process |
+| Multi-session | Support up to 10 terminal sessions |
+| Real-time Output | PTY output pushed via WebSocket |
+| Auto Path | Auto-opens in current workspace path |
+| Cross-platform | Windows (cmd.exe) / Linux/macOS (bash) |
+
+#### FileService — File Operations Service
+
+| Feature | Description |
+|---------|-------------|
+| Workspace Sandbox | All operations restricted to workspace |
+| Path Validation | resolvePath prevents path traversal |
+| Atomic Write | atomicWriteSync prevents data corruption |
+| Execution Tracking | Track active executions by runId |
+| File Watching | Support file change monitoring |
+
+#### SafetyService — Security Rules Management
+
+| Feature | Description |
+|---------|-------------|
+| Rule Management | Create/update/delete security rules |
+| Safety Score | Based on enabled rules count (0-100) |
+| Default Rules | Built-in rate limit rule |
 
 ---
 

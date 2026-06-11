@@ -217,6 +217,12 @@ class ChatService {
       throw new AppError('NOT_FOUND', `Chat session '${sessionId}' not found`, 404);
     }
 
+    // 从持久化的会话中恢复 SDK 会话 ID（如果内存缓存中没有）
+    if (!ChatService._sdkSessionIds.has(sessionId) && session.sdkSessionId) {
+      ChatService._sdkSessionIds.set(sessionId, session.sdkSessionId);
+      logger.info(`[Chat] 恢复 SDK 会话 ID: ${session.sdkSessionId}`);
+    }
+
     // 检测斜杠命令
     const slashMatch = content.trim().match(/^\/(\w+)(.*)?$/s);
     if (slashMatch) {
@@ -585,6 +591,16 @@ class ChatService {
     // 检查是否有可复用的SDK会话ID
     const existingSdkSessionId = ChatService._sdkSessionIds.get(sessionId);
 
+    // 当没有 SDK 会话 ID 时，将历史消息包含在 prompt 中
+    let finalPrompt = prompt;
+    if (!existingSdkSessionId) {
+      const session = ChatSessionModel.findById(sessionId);
+      if (session && session.messages && session.messages.length > 1) {
+        finalPrompt = this._buildPrompt(session.messages, prompt);
+        logger.info(`[Chat] 包含历史消息: ${session.messages.length} 条`);
+      }
+    }
+
     let output = '';
     let newSdkSessionId: string | undefined;
 
@@ -712,7 +728,7 @@ class ChatService {
       logger.info(`[ChatStream] 开始SDK调用, model=${resolvedModel}, resume=${!!existingSdkSessionId}, cwd=${CHAT_WORKSPACE}`);
 
       for await (const message of query({
-        prompt: prompt,
+        prompt: finalPrompt,
         options: queryOptions
       })) {
         const elapsed = Date.now() - callStart;
@@ -720,6 +736,8 @@ class ChatService {
         if (message.type === 'system' && message.subtype === 'init' && message.session_id) {
           newSdkSessionId = message.session_id;
           ChatService._sdkSessionIds.set(sessionId, newSdkSessionId);
+          // 持久化 SDK 会话 ID 到 ChatSession
+          ChatSessionModel.update(sessionId, { sdkSessionId: newSdkSessionId });
           logger.info(`[ChatStream] SDK会话ID: ${newSdkSessionId} (${elapsed}ms)`);
         } else {
           logger.info(`[ChatStream] 消息 type=${message.type}/${message.subtype || ''} (${elapsed}ms)`);

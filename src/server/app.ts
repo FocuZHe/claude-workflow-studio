@@ -25,6 +25,8 @@ const ApiKeyService = require('./services/ApiKeyService');
 const WorkflowService = require('./services/WorkflowService');
 const SnapshotService = require('./services/SnapshotService');
 const ChatService = require('./services/ChatService');
+const TaskQueueService = require('./services/TaskQueueService');
+const SafetyService = require('./services/SafetyService');
 const WsServer = require('./ws/server');
 const TagService = require('./services/TagService');
 
@@ -227,6 +229,9 @@ const sdkService = new SdkService(broadcastService);
 (global as any).__claudeService = claudeService;
 (global as any).__sdkService = sdkService;
 
+// Store SafetyService on app for route access
+app.set('safetyService', SafetyService);
+
 // Initialize WebSocket server
 const wsServer = new WsServer(broadcastService);
 wsServer.attach(server);
@@ -235,6 +240,7 @@ wsServer.attach(server);
 WorkflowService.init(broadcastService, claudeService);
 AgentService.init(broadcastService);
 ChatService.init(broadcastService, claudeService);
+TaskQueueService.init(broadcastService);
 TerminalService.setBroadcastService(broadcastService);
 WorkspaceManager.init();  // 恢复持久化的工作区
 

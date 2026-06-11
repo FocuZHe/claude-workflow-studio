@@ -753,7 +753,8 @@ window.TasksPage = (() => {
         if (!_selectionMode) {
             _selectedIds.clear();
             removeBatchActionBar();
-        } else {
+        }
+        else {
             showBatchActionBar();
         }
         renderList();

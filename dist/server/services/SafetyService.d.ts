@@ -35,5 +35,38 @@ export declare class SafetyService {
      * 删除规则
      */
     static deleteRule(ruleId: string): boolean;
+    /**
+     * 获取规则列表（带分页）
+     */
+    static getRules(): SafetyRule[];
+    /**
+     * 获取安全评分
+     */
+    static getSafetyScore(): {
+        score: number;
+    };
+    /**
+     * 获取威胁统计
+     */
+    static getThreatStats(): {
+        todayTotal: number;
+        blockedCount: number;
+    };
+    /**
+     * 获取威胁列表
+     */
+    static getThreats(params?: {
+        page?: number;
+        limit?: number;
+        type?: string;
+        severity?: string;
+    }): {
+        data: any[];
+        meta: {
+            total: number;
+            page: number;
+            limit: number;
+        };
+    };
 }
 //# sourceMappingURL=SafetyService.d.ts.map

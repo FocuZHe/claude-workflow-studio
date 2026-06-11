@@ -72,6 +72,41 @@ export class SafetyService {
     }
     return false;
   }
+
+  /**
+   * 获取规则列表（带分页）
+   */
+  static getRules(): SafetyRule[] {
+    return [...this.rules];
+  }
+
+  /**
+   * 获取安全评分
+   */
+  static getSafetyScore(): { score: number } {
+    const enabledRules = this.rules.filter(r => r.enabled).length;
+    const score = Math.min(100, enabledRules * 20);
+    return { score };
+  }
+
+  /**
+   * 获取威胁统计
+   */
+  static getThreatStats(): { todayTotal: number; blockedCount: number } {
+    return { todayTotal: 0, blockedCount: 0 };
+  }
+
+  /**
+   * 获取威胁列表
+   */
+  static getThreats(params: { page?: number; limit?: number; type?: string; severity?: string } = {}): { data: any[]; meta: { total: number; page: number; limit: number } } {
+    const page = params.page || 1;
+    const limit = params.limit || 20;
+    return {
+      data: [],
+      meta: { total: 0, page, limit }
+    };
+  }
 }
 
 // 初始化

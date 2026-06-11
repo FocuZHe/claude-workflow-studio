@@ -33,6 +33,7 @@ class ChatSessionModel {
       model: data.model || 'haiku',
       systemPrompt: data.systemPrompt || '',
       status: 'active',
+      sdkSessionId: data.sdkSessionId || null,
       contextConfig: data.contextConfig || {
         maxMessages: 20,
         maxTokens: 100000,

@@ -388,6 +388,9 @@ window.AgentsPage = (() => {
             _selectedIds.clear();
             removeBatchActionBar();
         }
+        else {
+            showBatchActionBar();
+        }
         renderGrid();
     }
     function toggleSelectItem(id) {

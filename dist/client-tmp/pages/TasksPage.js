@@ -754,6 +754,9 @@ window.TasksPage = (() => {
             _selectedIds.clear();
             removeBatchActionBar();
         }
+        else {
+            showBatchActionBar();
+        }
         renderList();
     }
     function toggleSelectItem(id) {

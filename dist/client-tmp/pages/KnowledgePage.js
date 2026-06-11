@@ -197,7 +197,7 @@ window.KnowledgePage = (() => {
       `
         });
         document.getElementById('kb-del-btn')?.addEventListener('click', async () => {
-            if (!confirm('确定删除？'))
+            if (!await window.Modal.confirm('确定删除？'))
                 return;
             try {
                 await window.API.deleteKnowledge(entry.id);

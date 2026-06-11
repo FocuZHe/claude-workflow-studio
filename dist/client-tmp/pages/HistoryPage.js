@@ -292,6 +292,9 @@ window.HistoryPage = (() => {
             _selectedIds.clear();
             removeBatchActionBar();
         }
+        else {
+            showBatchActionBar();
+        }
         loadHistory();
     }
     function toggleSelectItem(id) {

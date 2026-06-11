@@ -9,6 +9,7 @@
     Router.register('/agents', () => AgentsPage.render());
     Router.register('/workflows', () => WorkflowsPage.render());
     Router.register('/tasks', () => TasksPage.render());
+    Router.register('/task-queues', () => TaskQueuePage.render());
     Router.register('/files', () => FilesPage.render());
     Router.register('/workspaces', () => Router.navigate('/files'));
     Router.register('/broadcast', () => BroadcastPage.render());
@@ -22,6 +23,7 @@
     Router.register('/memory', () => MemoryPage.render());
     Router.register('/knowledge', () => KnowledgePage.render());
     Router.register('/analytics', () => AnalyticsPage.render());
+    Router.register('/safety', () => SafetyPage.render());
     // Market page with tabs
     function renderMarketPage() {
         const el = document.getElementById('content');
@@ -66,6 +68,7 @@
             '/agents': () => AgentsPage.cleanup?.(),
             '/workflows': () => WorkflowsPage.cleanup?.(),
             '/tasks': () => TasksPage.cleanup?.(),
+            '/task-queues': () => TaskQueuePage.cleanup?.(),
             '/broadcast': () => BroadcastPage.cleanup?.(),
             '/files': () => FilesPage.cleanup?.(),
             '/history': () => HistoryPage.cleanup?.(),
@@ -76,6 +79,7 @@
             '/memory': () => MemoryPage.cleanup?.(),
             '/knowledge': () => KnowledgePage.cleanup?.(),
             '/analytics': () => AnalyticsPage.cleanup?.(),
+            '/safety': () => SafetyPage.cleanup?.(),
         };
         if (previousPage && cleanupMap[previousPage]) {
             cleanupMap[previousPage]();

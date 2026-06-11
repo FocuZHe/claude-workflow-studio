@@ -117,7 +117,7 @@ window.WorkflowsPage = (() => {
     }
     async function loadWorkflows() {
         try {
-            const res = await API.getWorkflows({ limit: 9999 });
+            const res = await API.getWorkflows({ limit: 500 });
             const d = res.data;
             workflows = Array.isArray(d) ? d : (d?.items || []);
             // 通知其他页面工作流数据已更新
@@ -523,6 +523,8 @@ window.WorkflowsPage = (() => {
             if (!_isDraft)
                 _hasUnsavedChanges = false;
             WorkflowCanvas.setOnEdit(() => { _hasUnsavedChanges = true; });
+            // 布局变化（移动节点位置）不标记为未保存，静默保存
+            WorkflowCanvas.setOnLayoutChange(() => { saveLayoutSilently(); });
             initToolbar();
             // If workflow is running, start polling
             const execStatus = currentWorkflow.executionStatus || currentWorkflow.status || '';
@@ -739,6 +741,23 @@ window.WorkflowsPage = (() => {
             Toast.error('重命名失败: ' + e.message);
         }
     }
+    // 静默保存布局（仅位置变化，不提示用户）
+    let _layoutSaveTimer = null;
+    function saveLayoutSilently() {
+        if (!currentWorkflow || _isDraft)
+            return;
+        clearTimeout(_layoutSaveTimer);
+        _layoutSaveTimer = setTimeout(async () => {
+            try {
+                const nodes = WorkflowCanvas.getNodes();
+                const edges = WorkflowCanvas.getEdges();
+                await API.updateWorkflow(currentWorkflow.id, { nodes, edges });
+            }
+            catch (e) {
+                console.warn('布局保存失败:', e.message);
+            }
+        }, 500); // 500ms 防抖
+    }
     async function saveWorkflow() {
         if (!currentWorkflow)
             return;
@@ -877,7 +896,7 @@ window.WorkflowsPage = (() => {
         // Load all workflows for selection
         let allWfs = [];
         try {
-            const res = await API.getWorkflows({ limit: 9999 });
+            const res = await API.getWorkflows({ limit: 500 });
             allWfs = (res.data?.items || res.data || []).filter((w) => w.id !== workflow.id);
         }
         catch (e) { /* ignore */ }
@@ -1718,6 +1737,9 @@ window.WorkflowsPage = (() => {
         if (!_selectionMode) {
             _selectedIds.clear();
             removeBatchActionBar();
+        }
+        else {
+            showBatchActionBar();
         }
         renderContent();
     }

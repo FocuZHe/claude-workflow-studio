@@ -105,7 +105,8 @@ window.DashboardPage = (() => {
     function animateNumber(el, target) {
         const raw = el.textContent.trim();
         const current = raw === '--' || raw === '' ? 0 : (parseInt(raw) || 0);
-        if (current === target && raw !== '--' && raw !== '') return;
+        if (current === target && raw !== '--' && raw !== '')
+            return;
         const duration = 400;
         const start = performance.now();
         function tick(now) {
@@ -113,7 +114,8 @@ window.DashboardPage = (() => {
             const progress = Math.min(elapsed / duration, 1);
             const eased = 1 - Math.pow(1 - progress, 3); // easeOutCubic
             el.textContent = String(Math.round(current + (target - current) * eased));
-            if (progress < 1) requestAnimationFrame(tick);
+            if (progress < 1)
+                requestAnimationFrame(tick);
         }
         requestAnimationFrame(tick);
     }
