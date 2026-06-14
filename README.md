@@ -61,6 +61,8 @@ npm start      # 或双击 start.bat
 | **可视化工作流** | 6 种节点类型（Agent/评估/审批/条件分支/子工作流），拖拽编排，AI 自然语言生成 |
 | **工作流模板** | 17 个内置模板，覆盖代码审查、Bug 修复、文档生成、安全审计等场景 |
 | **技能市场** | 丰富的技能库，安装后自动创建 SKILL.md 文件，SDK 自动发现 |
+| **MCP 服务支持** | 直接使用 Claude CLI 中配置的 MCP 服务器，无需额外配置 |
+| **Claude Skills 兼容** | 直接使用 Claude CLI 中安装的 Skills，自动加载到子 Agent |
 | **自治判断节点** | AI 审查代码/内容，返回 JSON 格式 pass/fail，支持自愈循环 |
 | **人工审批节点** | 编排器级别拦截，暂停等待人工审核，支持通过/拒绝，拒绝后自动将反馈传回主 Agent 重试修改 |
 | **实时流式输出** | 所有子 Agent 输出通过 WebSocket 实时推送（50ms 合流缓冲） |
@@ -112,6 +114,46 @@ npm start      # 或双击 start.bat
 **Q: 数据会丢吗？** → 每 2 秒自动保存，正常关闭不会丢数据
 
 **Q: 能管理多个项目吗？** → 可以，通过「文件」→「切换工作区」创建独立环境
+
+**Q: 如何使用 MCP 服务器？** → 在 Claude CLI 中配置 MCP 服务器后，本平台的子 Agent 会自动继承，无需额外配置
+
+**Q: 如何使用 Claude Skills？** → 在 Claude CLI 中安装的 Skills 会自动加载到子 Agent，也可以在本平台的「技能市场」中管理
+
+---
+
+## MCP 与 Skills 配置
+
+### MCP 服务器配置
+
+在 `~/.claude/settings.json` 或项目目录下创建 `.mcp.json`：
+
+```json
+{
+  "mcpServers": {
+    "web-search": {
+      "command": "npx",
+      "args": ["-y", "@anthropic-ai/mcp-server-web-search"],
+      "env": { "API_KEY": "your-api-key" }
+    },
+    "filesystem": {
+      "command": "npx",
+      "args": ["-y", "@anthropic-ai/mcp-server-filesystem", "/path/to/dir"]
+    }
+  }
+}
+```
+
+### Skills 管理
+
+```bash
+# 在 Claude CLI 中安装 Skills
+claude skill install @anthropic-ai/skill-web-search
+
+# 查看已安装的 Skills
+claude skill list
+```
+
+安装后的 Skills 会自动被本平台的子 Agent 发现和使用。
 
 ---
 
