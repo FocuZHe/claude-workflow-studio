@@ -18,12 +18,12 @@
 > ⚠️ **开发状态：实验性预览版** — 本项目由知识面较浅薄的大一学生自行开发，功能可能有很多不完善之处，存在未发现的 Bug。**未经充分生产环境测试，请不要用于重要文件的修改上。** 欢迎 Fork 自行修改。维护时间有限，Issue 和 PR 处理可能不及时。
 
 <p align="center">
-  <img src="screenshots/控制台.png" alt="控制面板" width="45%">
-  <img src="screenshots/工作流.png" alt="工作流编辑器" width="45%">
+  <img src="screenshots/控制台.png" alt="控制面板 — 查看 Agent 状态、工作流执行进度和系统统计" width="45%">
+  <img src="screenshots/工作流.png" alt="工作流编辑器 — 拖拽式节点编排，支持多种节点类型" width="45%">
 </p>
 <p align="center">
-  <img src="screenshots/市场.png" alt="技能市场" width="45%">
-  <img src="screenshots/文件.png" alt="文件管理" width="45%">
+  <img src="screenshots/市场.png" alt="技能市场 — 浏览和安装 Skills，管理 MCP 服务器" width="45%">
+  <img src="screenshots/文件.png" alt="文件管理 — 浏览、编辑工作区文件，支持内嵌终端" width="45%">
 </p>
 
 ---
@@ -58,35 +58,29 @@ npm start      # 或双击 start.bat
 | 功能 | 说明 |
 |------|------|
 | **双轨闭环架构** | 主Agent（原生API）协调 + 子Agent（SDK）执行，物理隔离防幻觉 |
-| **可视化工作流** | 6 种节点类型（Agent/评估/审批/条件分支/子工作流），拖拽编排，AI 自然语言生成 |
-| **工作流模板** | 17 个内置模板，覆盖代码审查、Bug 修复、文档生成、安全审计等场景 |
-| **技能市场** | 丰富的技能库，安装后自动创建 SKILL.md 文件，SDK 自动发现 |
+| **可视化工作流** | 7 种节点类型，拖拽编排，AI 自然语言生成 |
+| **工作流模板** | 13 个内置模板，覆盖代码审查、Bug 修复、文档生成、安全审计等场景 |
 | **MCP 服务支持** | 直接使用 Claude CLI 中配置的 MCP 服务器，无需额外配置 |
 | **Claude Skills 兼容** | 直接使用 Claude CLI 中安装的 Skills，自动加载到子 Agent |
-| **自治判断节点** | AI 审查代码/内容，返回 JSON 格式 pass/fail，支持自愈循环 |
 | **人工审批节点** | 编排器级别拦截，暂停等待人工审核，支持通过/拒绝，拒绝后自动将反馈传回主 Agent 重试修改 |
 | **实时流式输出** | 所有子 Agent 输出通过 WebSocket 实时推送（50ms 合流缓冲） |
 | **断点续传** | 节点级检查点，崩溃或暂停后从断点恢复 |
 | **记忆系统** | 按工作区隔离存储，支持开关控制、跨工作流传递、共享数据池 |
 | **内嵌终端** | 基于 node-pty 的真实 PTY 终端，支持所有 shell 命令，自动在当前工作区打开 |
 | **多工作区** | 独立运行环境，数据隔离，支持批量克隆工作流到其他工作区 |
-| **实时 CRUD 推送** | Agent/Workflow/Task 的创建、更新、删除通过 WebSocket 实时通知前端 |
 | **任务队列** | 批量执行，支持暂停/恢复/取消，优先级+时间排序 |
 | **知识库** | 分类/标签管理，全文搜索，可注入 Agent 执行，本地持久化存储 |
 | **数据分析** | 执行统计、成功率、平均耗时、按工作流统计、执行时间线 |
-| **崩溃恢复** | 服务器重启自动修复卡在 running 的执行记录 |
 | **AI 对话** | 只读模式，支持 WebSearch、WebFetch、文件读取/搜索 |
-| **安全** | API Key AES-256-GCM 加密、命令白名单、并发执行防护、工作区沙箱、文件访问限制 |
-| **API密钥检测** | 启动时自动检测API密钥配置，未配置时弹出提示引导用户设置 |
+| **安全** | API Key AES-256-GCM 加密、命令白名单、工作区沙箱、速率限制、安全响应头 |
 
 ### 工作流节点
 
 | 节点 | 说明 |
 |------|------|
 | **开始** | 工作流入口 |
-| **Agent** | 调用 AI 执行任务 |
-| **自治判断** | AI 审查代码/内容，返回 JSON {pass, reason}，支持自愈循环 |
-| **人工审批** | 暂停等待用户审批，支持通过/拒绝 |
+| **Agent** | 调用 AI 执行任务（支持多种角色：开发者、审查员、测试员等） |
+| **人工审批** | 暂停等待用户审批，支持通过/拒绝，拒绝后可重试 |
 | **条件分支** | 根据上游输出判断，选择一条分支执行 |
 | **子工作流** | 引用其他工作流，内联执行 |
 | **结束** | 汇总最终结果 |
@@ -105,6 +99,15 @@ npm start      # 或双击 start.bat
 
 ---
 
+## MCP 与 Skills
+
+本平台的子 Agent 直接继承 Claude CLI 的配置，无需额外设置。
+
+- **MCP 服务器**：在 Claude CLI 中配置后，子 Agent 自动可用
+- **Skills**：在 Claude CLI 中安装后，子 Agent 自动加载
+
+---
+
 ## 常见问题
 
 **Q: Agent 执行失败？** → 检查 CLI 是否安装（`claude --version`），CLI 不可用时自动回退 SDK 模式
@@ -114,46 +117,6 @@ npm start      # 或双击 start.bat
 **Q: 数据会丢吗？** → 每 2 秒自动保存，正常关闭不会丢数据
 
 **Q: 能管理多个项目吗？** → 可以，通过「文件」→「切换工作区」创建独立环境
-
-**Q: 如何使用 MCP 服务器？** → 在 Claude CLI 中配置 MCP 服务器后，本平台的子 Agent 会自动继承，无需额外配置
-
-**Q: 如何使用 Claude Skills？** → 在 Claude CLI 中安装的 Skills 会自动加载到子 Agent，也可以在本平台的「技能市场」中管理
-
----
-
-## MCP 与 Skills 配置
-
-### MCP 服务器配置
-
-在 `~/.claude/settings.json` 或项目目录下创建 `.mcp.json`：
-
-```json
-{
-  "mcpServers": {
-    "web-search": {
-      "command": "npx",
-      "args": ["-y", "@anthropic-ai/mcp-server-web-search"],
-      "env": { "API_KEY": "your-api-key" }
-    },
-    "filesystem": {
-      "command": "npx",
-      "args": ["-y", "@anthropic-ai/mcp-server-filesystem", "/path/to/dir"]
-    }
-  }
-}
-```
-
-### Skills 管理
-
-```bash
-# 在 Claude CLI 中安装 Skills
-claude skill install @anthropic-ai/skill-web-search
-
-# 查看已安装的 Skills
-claude skill list
-```
-
-安装后的 Skills 会自动被本平台的子 Agent 发现和使用。
 
 ---
 

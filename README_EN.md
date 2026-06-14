@@ -18,12 +18,12 @@
 > ⚠️ **Status: Experimental Preview** — This project is developed by a first-year college student with limited knowledge. Features may have many imperfections and undiscovered bugs may exist. **Not thoroughly tested in production environments — do not use for modifying important files.** Feel free to fork and modify. Maintenance time is limited; issues and PRs may not be addressed promptly.
 
 <p align="center">
-  <img src="screenshots/控制台.png" alt="Dashboard" width="45%">
-  <img src="screenshots/工作流.png" alt="Workflow Editor" width="45%">
+  <img src="screenshots/控制台.png" alt="Dashboard — View agent status, workflow progress, and system statistics" width="45%">
+  <img src="screenshots/工作流.png" alt="Workflow Editor — Drag-and-drop node editor with multiple node types" width="45%">
 </p>
 <p align="center">
-  <img src="screenshots/市场.png" alt="Skills Marketplace" width="45%">
-  <img src="screenshots/文件.png" alt="File Manager" width="45%">
+  <img src="screenshots/市场.png" alt="Skills Marketplace — Browse and install Skills, manage MCP servers" width="45%">
+  <img src="screenshots/文件.png" alt="File Manager — Browse and edit workspace files with embedded terminal" width="45%">
 </p>
 
 ---
@@ -58,35 +58,29 @@ npm start      # or double-click start.bat
 | Feature | Description |
 |---------|-------------|
 | **Double-Loop Architecture** | Master Agent (Native API) coordinates + Sub Agent (SDK) executes, physical isolation prevents hallucination |
-| **Visual Workflows** | 6 node types (Agent/Evaluator/Approval/Condition/Sub-workflow), drag-and-drop editor, AI workflow generation |
-| **Workflow Templates** | 17 built-in templates: code review, bug fix, doc generation, security audit, etc. |
-| **Skills Marketplace** | Rich skill library, auto-creates SKILL.md files on install, SDK auto-discovery |
+| **Visual Workflows** | 7 node types, drag-and-drop editor, AI workflow generation |
+| **Workflow Templates** | 13 built-in templates: code review, bug fix, doc generation, security audit, etc. |
 | **MCP Server Support** | Directly use MCP servers configured in Claude CLI, no additional setup needed |
 | **Claude Skills Compatible** | Directly use Skills installed in Claude CLI, auto-loaded to sub-agents |
-| **Autonomous Evaluator** | AI reviews code/content, returns JSON {pass, reason}, supports self-healing loop |
 | **Human Approval Gate** | Orchestrator-level interception, pause for human review, support approve/reject, reject automatically passes feedback to main Agent for retry |
 | **Real-time Streaming** | All sub-agent output streamed via WebSocket (50ms buffer) |
 | **Checkpoint/Resume** | Per-node checkpoints, resume from breakpoint after crash or pause |
 | **Memory System** | Per-workspace isolation, toggle control, cross-workflow sharing, shared data pool |
 | **Embedded Terminal** | Real PTY terminal via node-pty, supports all shell commands, auto-opens in current workspace |
 | **Multi-Workspace** | Isolated runtime environments, batch clone workflows to other workspaces |
-| **Real-time CRUD Push** | Agent/Workflow/Task create/update/delete notifications via WebSocket |
 | **Task Queues** | Batch execution with pause/resume/cancel, priority + time sorting |
 | **Knowledge Base** | Category/tag organization, full-text search, injectable into agents |
 | **Analytics** | Execution statistics, success rate, average duration, per-workflow stats, execution timeline |
-| **Crash Recovery** | Auto-repair stuck execution records on server restart |
 | **AI Chat** | Read-only mode, supports WebSearch, WebFetch, file read/search |
-| **Security** | API Key AES-256-GCM encryption, command whitelist, concurrent execution protection, workspace sandbox |
-| **API Key Detection** | Auto-detects API key configuration on startup, shows prompt to guide user setup |
+| **Security** | API Key AES-256-GCM encryption, command whitelist, workspace sandbox, rate limiting, security headers |
 
 ### Workflow Nodes
 
 | Node | Description |
 |------|-------------|
 | **Start** | Workflow entry |
-| **Agent** | Execute task via AI |
-| **Evaluator** | AI reviews code/content, returns JSON {pass, reason}, supports self-healing loop |
-| **Approval** | Pause for human review, support approve/reject |
+| **Agent** | Execute task via AI (supports multiple roles: developer, reviewer, tester, etc.) |
+| **Approval** | Pause for human review, support approve/reject, reject triggers retry |
 | **Condition** | Branch based on upstream output, choose one path to execute |
 | **Sub-workflow** | Reference another workflow, inline execution |
 | **End** | Produce final result |
@@ -105,6 +99,15 @@ npm start      # or double-click start.bat
 
 ---
 
+## MCP & Skills
+
+Our platform's sub-agents directly inherit Claude CLI's configuration — no extra setup required.
+
+- **MCP Servers**: Configure in Claude CLI, sub-agents use them automatically
+- **Skills**: Install in Claude CLI, sub-agents load them automatically
+
+---
+
 ## FAQ
 
 **Q: Agent execution failed?** → Check CLI installed (`claude --version`). Falls back to SDK mode if CLI unavailable.
@@ -114,46 +117,6 @@ npm start      # or double-click start.bat
 **Q: Will data be lost?** → Auto-saves every 2 seconds. Normal shutdown loses nothing.
 
 **Q: Multiple projects?** → Yes, use Files → Switch Workspace to create isolated environments.
-
-**Q: How to use MCP servers?** → Configure MCP servers in Claude CLI, and our platform's sub-agents will automatically inherit them
-
-**Q: How to use Claude Skills?** → Skills installed in Claude CLI are auto-loaded to sub-agents, or manage them in our "Skills Marketplace"
-
----
-
-## MCP & Skills Configuration
-
-### MCP Server Configuration
-
-Create `~/.claude/settings.json` or `.mcp.json` in your project directory:
-
-```json
-{
-  "mcpServers": {
-    "web-search": {
-      "command": "npx",
-      "args": ["-y", "@anthropic-ai/mcp-server-web-search"],
-      "env": { "API_KEY": "your-api-key" }
-    },
-    "filesystem": {
-      "command": "npx",
-      "args": ["-y", "@anthropic-ai/mcp-server-filesystem", "/path/to/dir"]
-    }
-  }
-}
-```
-
-### Skills Management
-
-```bash
-# Install Skills in Claude CLI
-claude skill install @anthropic-ai/skill-web-search
-
-# List installed Skills
-claude skill list
-```
-
-Installed Skills are automatically discovered and used by our platform's sub-agents.
 
 ---
 
@@ -186,4 +149,3 @@ npm test               # Run tests
 ## License
 
 [MIT License](LICENSE)
-
