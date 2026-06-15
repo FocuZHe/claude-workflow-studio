@@ -61,7 +61,11 @@ class WorkflowService {
                             }
                             hasCheckpoint = !!checkpoint;
                         }
-                        catch (_) { }
+                        catch (checkpointErr) {
+                            // 检查点读取失败时记录日志，但仍标记为 interrupted 让用户可以手动恢复
+                            logger?.warn?.(`Failed to read checkpoint for workflow ${wf.id}:`, checkpointErr);
+                            hasCheckpoint = true; // 假设有检查点，让用户手动决定
+                        }
                         if (hasCheckpoint) {
                             // 有 checkpoint：标记为 interrupted，用户可以手动恢复
                             log.status = 'interrupted';
@@ -566,9 +570,18 @@ class WorkflowService {
                     const storePath = path.join(process.cwd(), 'data', 'session-store.json');
                     let store = {};
                     try {
-                        store = JSON.parse(fs.readFileSync(storePath, 'utf-8'));
+                        const content = fs.readFileSync(storePath, 'utf-8');
+                        store = JSON.parse(content);
                     }
-                    catch (_) { }
+                    catch (parseErr) {
+                        // JSON 解析失败时备份损坏的文件，避免数据丢失
+                        try {
+                            const backupPath = storePath + '.corrupted.' + Date.now();
+                            fs.copyFileSync(storePath, backupPath);
+                            logger?.warn?.(`Session store corrupted, backed up to ${backupPath}`);
+                        }
+                        catch (_) { }
+                    }
                     store[key] = value;
                     fs.writeFileSync(storePath, JSON.stringify(store, null, 2));
                 }

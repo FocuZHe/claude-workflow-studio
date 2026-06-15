@@ -1,6 +1,6 @@
 /**
  * TaskQueueService - 任务队列服务
- * 管理异步任务队列
+ * 管理异步任务队列，支持顺序执行、暂停/恢复、错误处理
  */
 export interface Task {
     id: string;
@@ -17,8 +17,10 @@ export interface TaskQueue {
     name: string;
     description?: string;
     workflowId: string;
-    status: 'idle' | 'running' | 'paused' | 'completed' | 'cancelled';
+    status: 'idle' | 'running' | 'paused' | 'completed' | 'failed' | 'cancelled';
     items: any[];
+    currentItemIndex: number;
+    autoStopOnError: boolean;
     createdAt: Date;
     updatedAt: Date;
 }
@@ -26,6 +28,7 @@ export declare class TaskQueueService {
     private static tasks;
     private static queues;
     private static _broadcastService;
+    private static _runningQueues;
     /**
      * 初始化广播服务
      */
@@ -101,6 +104,11 @@ export declare class TaskQueueService {
      */
     static cancel(id: string): TaskQueue;
     /**
+     * 执行队列（内部方法）
+     * 通过 TaskService 创建任务，任务完成后通过回调继续执行下一个
+     */
+    private static _executeQueue;
+    /**
      * 添加队列项
      */
     static addItem(queueId: string, data: any): any;
@@ -108,5 +116,17 @@ export declare class TaskQueueService {
      * 删除队列项
      */
     static removeItem(queueId: string, itemId: string): void;
+    /**
+     * 任务完成回调（由 TaskService 调用）
+     */
+    static _onTaskComplete(queueId: string, itemId: string, taskId: string, result: any): void;
+    /**
+     * 任务失败回调（由 TaskService 调用）
+     */
+    static _onTaskFail(queueId: string, itemId: string, taskId: string, error: string): void;
+    /**
+     * 继续执行队列（内部方法）
+     */
+    private static _continueQueue;
 }
 //# sourceMappingURL=TaskQueueService.d.ts.map

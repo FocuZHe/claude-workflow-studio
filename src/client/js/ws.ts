@@ -73,10 +73,16 @@ interface WsAPI {
       if (_reconnectAttempts < _maxReconnectAttempts) {
         scheduleReconnect();
       } else {
-        console.error('[WS] Max reconnection attempts reached');
-        if (typeof Toast !== 'undefined' && (Toast as any).error) {
-          (Toast as any).error('WebSocket 连接失败，请刷新页面');
-        }
+        console.error('[WS] Max reconnection attempts reached, will retry on page focus');
+        // 添加页面焦点事件监听，用户回到页面时自动重连
+        const onFocus = () => {
+          if (!connected) {
+            console.log('[WS] Page focused, attempting reconnection...');
+            _reconnectAttempts = 0;
+            scheduleReconnect();
+          }
+        };
+        window.addEventListener('focus', onFocus, { once: true });
       }
     };
 

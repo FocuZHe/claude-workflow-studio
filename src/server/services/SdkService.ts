@@ -199,6 +199,7 @@ class SdkService extends EventEmitter {
    */
   async _withEnvLock<T>(fn: () => Promise<T>): Promise<T> {
     let result: T;
+    let error: Error | null = null;
     this._envMutex = this._envMutex.then(async () => {
       const savedAuthToken = process.env.ANTHROPIC_AUTH_TOKEN;
       const savedApiKey = process.env.ANTHROPIC_API_KEY;
@@ -206,12 +207,18 @@ class SdkService extends EventEmitter {
       delete process.env.ANTHROPIC_API_KEY;
       try {
         result = await fn();
+      } catch (e) {
+        error = e as Error;
       } finally {
         if (savedAuthToken) process.env.ANTHROPIC_AUTH_TOKEN = savedAuthToken;
         if (savedApiKey) process.env.ANTHROPIC_API_KEY = savedApiKey;
       }
+    }).catch(() => {
+      // 重置锁状态，防止永久锁死
+      this._envMutex = Promise.resolve();
     });
     await this._envMutex;
+    if (error) throw error;
     return result!;
   }
 

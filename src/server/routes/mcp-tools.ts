@@ -8,7 +8,7 @@ const { AppError } = require('../middleware/errorHandler');
  */
 router.get('/', (req: any, res: any, next: any) => {
   try {
-    const tools = McpService.getAll();
+    const tools = McpService.getAllTools();
     res.json({ success: true, data: tools });
   } catch (err) {
     next(err);

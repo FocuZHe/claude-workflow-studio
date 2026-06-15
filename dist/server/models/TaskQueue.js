@@ -16,12 +16,13 @@ savedQueues.forEach((queue) => {
 });
 // Valid queue status transitions
 const QUEUE_STATUS_TRANSITIONS = {
+    idle: ['running', 'cancelled'],
     pending: ['running', 'cancelled'],
     running: ['paused', 'completed', 'failed', 'cancelled'],
     paused: ['running', 'cancelled', 'failed'],
     completed: [],
-    failed: ['pending'],
-    cancelled: ['pending']
+    failed: ['pending', 'idle'],
+    cancelled: ['pending', 'idle']
 };
 // Valid item status transitions
 const ITEM_STATUS_TRANSITIONS = {
@@ -69,7 +70,7 @@ class TaskQueueModel {
             description: data.description || '',
             workflowId: data.workflowId,
             workspaceId: data.workspaceId !== undefined ? data.workspaceId : null,
-            status: 'pending',
+            status: 'idle',
             items,
             currentItemIndex: 0,
             autoStopOnError: data.autoStopOnError !== undefined ? data.autoStopOnError : true,

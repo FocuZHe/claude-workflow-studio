@@ -4,6 +4,8 @@
 // ═══════════════════════════════════════════════
 window.DashboardPage = (() => {
     async function render() {
+        // 清理旧定时器，防止泄漏
+        cleanup();
         const el = document.getElementById('content');
         if (!el)
             return;

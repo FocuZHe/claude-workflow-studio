@@ -602,7 +602,14 @@ router.post('/create-from-text', async (req: any, res: any, next: any) => {
 
     const created = WorkflowModel.create(workflowData);
     saveWorkspaceState();
-    res.status(201).json({ success: true, data: created });
+
+    // 构建响应，包含警告信息
+    const response: any = { success: true, data: created };
+    if (workflowData._warnings && workflowData._warnings.length > 0) {
+      response.warnings = workflowData._warnings;
+    }
+
+    res.status(201).json(response);
   } catch (err) { next(err); }
 });
 
@@ -614,6 +621,7 @@ async function generateWorkflowByAI(description: string) {
 
   // Show globally installed Skills for AI to reference
   let skillsHint = '';
+  let skillsLoadError = false;
   try {
     const SkillService = require('../services/SkillService');
     const installedSkills = SkillService.getInstalled();
@@ -624,10 +632,14 @@ async function generateWorkflowByAI(description: string) {
         : installedSkills.map((s: any) => `${s.name}（${(s.description || '').substring(0, 30)}）`).join('\n');
       skillsHint = `\n\n已安装Skills：\n${skillLines}\n\n在agent节点的skillNames数组中填入匹配的Skill名称。`;
     }
-  } catch (_) {}
+  } catch (err: any) {
+    skillsLoadError = true;
+    logger.warn(`Failed to load Skills for AI workflow generation: ${err.message}`);
+  }
 
   // Show existing Agents for potential binding
   let agentHint = '';
+  let agentsLoadError = false;
   try {
     const AgentModel = require('../models/Agent');
     const all = AgentModel.findAll?.({ limit: 100 }) || {};
@@ -636,7 +648,15 @@ async function generateWorkflowByAI(description: string) {
       const lines = agents.map((a: any) => `- "${a.name}" (id: ${a.id}, role: ${a.role}${a.skillNames?.length > 0 ? ', Skills: ' + a.skillNames.join(', ') : ''})`).join('\n');
       agentHint = `\n\n已有Agent（可绑定）：\n${lines}\n\n如果节点任务与已有Agent匹配，设置agentId绑定它。`;
     }
-  } catch (_) {}
+  } catch (err: any) {
+    agentsLoadError = true;
+    logger.warn(`Failed to load Agents for AI workflow generation: ${err.message}`);
+  }
+
+  // 如果加载失败，在返回结果中提示用户
+  const warnings: string[] = [];
+  if (skillsLoadError) warnings.push('Skills数据加载失败，AI无法参考已安装的技能');
+  if (agentsLoadError) warnings.push('Agents数据加载失败，AI无法绑定已有的智能体');
 
   const systemPromptContent = `你是一个工作流设计专家。用户会用自然语言描述想要的工作流，你需要将其转换为结构化的JSON格式。${agentHint}
 
@@ -819,6 +839,12 @@ async function generateWorkflowByAI(description: string) {
       });
 
       logger.info('AI workflow generation successful', { name: parsed.name, nodeCount: parsed.nodes.length });
+
+      // 添加警告信息
+      if (warnings.length > 0) {
+        parsed._warnings = warnings;
+      }
+
       return parsed;
     } catch (parseErr: any) {
       logger.error('AI workflow JSON parse failed', { error: parseErr.message, rawOutput: output.substring(0, 500) });
