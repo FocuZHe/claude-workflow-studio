@@ -6,6 +6,15 @@ const path = require('path');
 const fs = require('fs');
 const crypto = require('crypto');
 
+// Some legacy tests call require.resolve() for source .ts files only to clear
+// caches. Registering the extension lets Node resolve those paths without
+// changing runtime imports, which still use compiled dist files.
+if (!require.extensions['.ts']) {
+  require.extensions['.ts'] = function (_module, filename) {
+    throw new Error(`Direct requiring TypeScript source is not supported in tests: ${filename}`);
+  };
+}
+
 const baseDir = path.join(__dirname, '.temp-data');
 
 // Unique subdirectory per worker/process to prevent cross-test file corruption

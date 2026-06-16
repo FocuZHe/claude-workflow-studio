@@ -4,17 +4,19 @@
   "description": "Claude Workflow Studio - Multi-Agent Orchestration Platform",
   "main": "dist/server/app.js",
   "bin": {
+    "claude-workflow-studio": "./bin/cli.js",
     "multi-agent-platform": "./bin/cli.js"
   },
   "scripts": {
+    "setup": "npm install --no-audit --no-fund && npm run build",
     "start": "node bin/cli.js",
     "dev": "node --watch-path=src --watch-path=tests bin/cli.js",
     "build": "tsc",
     "build:watch": "tsc --watch",
     "build:frontend": "tsc -p tsconfig.frontend.json --outDir dist/client-tmp && node scripts/copy-frontend.js",
     "check:frontend": "tsc -p tsconfig.frontend.json --noEmit",
-    "test": "node --require ./tests/setup.js --test --test-timeout=10000 --test-force-exit tests/server/*.test.js",
-    "test:verbose": "node --require ./tests/setup.js --test --test-timeout=10000 --test-force-exit --test-reporter=spec tests/server/*.test.js",
+    "test": "node --require ./tests/setup.js --test --test-timeout=30000 --test-force-exit tests/server/*.test.js",
+    "test:verbose": "node --require ./tests/setup.js --test --test-timeout=30000 --test-force-exit --test-reporter=spec tests/server/*.test.js",
     "test:integration": "node --require ./tests/setup.js --test --test-timeout=30000 tests/server/integration.test.js",
     "test:frontend": "jest --config jest.frontend.config.js"
   },

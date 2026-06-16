@@ -214,6 +214,7 @@ class DataStore {
 
   _saveSqlite(data: any[]): void {
     try {
+      this.ensureDir();
       // 备份
       if (fs.existsSync(this.sqlitePath)) {
         try { fs.copyFileSync(this.sqlitePath, this.bakPath); } catch (_) {}
@@ -241,6 +242,7 @@ class DataStore {
 
   _saveJson(data: any[]): void {
     try {
+      this.ensureDir();
       const json = JSON.stringify(data, null, 2);
       if (fs.existsSync(this.filePath)) {
         try { fs.copyFileSync(this.filePath, this.filePath + '.bak'); } catch (_) {}

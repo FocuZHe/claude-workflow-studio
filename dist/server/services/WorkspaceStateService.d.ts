@@ -9,12 +9,24 @@ export interface WorkspaceState {
     workspacePath?: string;
     workflows?: any[];
     agents?: any[];
+    tasks?: any[];
+    chatSessions?: any[];
+    taskQueues?: any[];
+    promptTemplates?: any[];
+    skills?: any;
+    mcpTools?: any;
+    knowledge?: any[];
+    tags?: any[];
+    artifactIndex?: any[];
+    executionLog?: any[];
     manifest?: any;
     createdAt?: Date;
     updatedAt?: Date;
 }
 export declare class WorkspaceStateService {
     private static states;
+    private static saveTimers;
+    private static fileMap;
     /**
      * 确保工作流文件夹存在，并创建所有必要的目录和文件
      * 按照架构文档要求创建完整的目录结构
@@ -28,6 +40,7 @@ export declare class WorkspaceStateService {
      * 保存状态
      */
     static saveState(state: WorkspaceState): void;
+    static saveState(workspacePath: string, key: string, data: any): void;
     /**
      * 获取状态
      */

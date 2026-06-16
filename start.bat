@@ -3,10 +3,14 @@ cd /d "%~dp0"
 
 :: Add Node.js to PATH
 set "PATH=%PATH%;C:\Program Files\nodejs"
+set "DEFAULT_PORT=3456"
+if not "%~1"=="" set "PORT=%~1"
+if "%PORT%"=="" set "PORT=%DEFAULT_PORT%"
 
 echo ========================================
 echo   Multi-Agent Platform - Starting...
 echo ========================================
+echo   Port: %PORT%
 echo.
 
 :: Check Node.js
@@ -84,7 +88,7 @@ call npx pm2 delete claude-console >nul 2>&1
 
 :: Start service
 echo [4/4] Starting service...
-call npx pm2 start dist/server/app.js --name claude-console
+call npx pm2 start dist/server/app.js --name claude-console --update-env
 if errorlevel 1 (
     echo.
     echo [ERROR] Failed to start service!
@@ -99,7 +103,7 @@ call npx pm2 save >nul 2>&1
 echo.
 echo ========================================
 echo   Service started successfully!
-echo   Visit http://localhost:3000
+echo   Visit http://localhost:%PORT%
 echo   Run stop.bat to stop the service
 echo ========================================
 echo.

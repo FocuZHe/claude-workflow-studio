@@ -30,14 +30,30 @@
 
 ## Quick Start
 
-**Requirements**: [Node.js 18+](https://nodejs.org/) and [Claude Code CLI](https://docs.anthropic.com/en/docs/claude-code)
+**Requirements**: [Node.js 18+](https://nodejs.org/). [Claude Code CLI](https://docs.anthropic.com/en/docs/claude-code) is optional; if it is not installed, configure an API key in Settings and use SDK mode.
 
-**Install**: Unzip → Double-click `install.bat` → Double-click `start.bat` → Visit http://localhost:3000
+**Recommended flow (cross-platform)**:
 
 ```bash
-npm install    # or double-click install.bat
-npm start      # or double-click start.bat
+npm run setup
+npm start
 ```
+
+Open http://localhost:3456 after startup.
+
+**Custom port**:
+
+```bash
+npm start -- --port 3457
+```
+
+You can also use an environment variable:
+
+```powershell
+$env:PORT=3457; npm start
+```
+
+**Optional Windows double-click flow**: Unzip → double-click `install.bat` → double-click `start.bat`. To choose a port from the command line, run `start.bat 3457`.
 
 ---
 
@@ -123,19 +139,21 @@ Our platform's sub-agents directly inherit Claude CLI's configuration — no ext
 ## Commands
 
 ```bash
-npm start              # Start server
-npm run dev            # Dev mode (auto-restart)
-npm test               # Run tests
+npm run setup                 # Install dependencies and build
+npm start                     # Start server (default http://localhost:3456)
+npm start -- --port 3457      # Start on a custom port
+npm run dev                   # Dev mode (auto-restart, also supports -- --port)
+npm test                      # Run tests
 ```
 
 ### Batch Scripts (Windows)
 
 | Script | Description |
 |--------|-------------|
-| `install.bat` | One-click dependency install |
-| `start.bat` | Start service |
+| `install.bat` | One-click dependency install and build |
+| `start.bat` | Start service (default port 3456; use `start.bat 3457` for a custom port) |
 | `stop.bat` | Stop service |
-| `restart.bat` | Restart service |
+| `restart.bat` | Restart service (use `restart.bat 3457` for a custom port) |
 | `logs.bat` | View logs |
 | `add-to-startup.bat` | Add to startup |
 | `remove-from-startup.bat` | Remove from startup |

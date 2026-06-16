@@ -888,7 +888,7 @@ Unknown model → Haiku (fallback)
 
 | Parameter | Value |
 |-----------|-------|
-| Web Server Port | 3000 |
+| Web Server Port | 3456 (override with PORT) |
 | WebSocket Heartbeat | Client 25 seconds / Server 30 seconds timeout |
 | Reconnection | Max 10 times, max 30 seconds interval |
 | Agent Execution Timeout | 30 minutes |

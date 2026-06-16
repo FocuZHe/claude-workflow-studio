@@ -12,6 +12,16 @@ export interface WorkspaceState {
   workspacePath?: string;
   workflows?: any[];
   agents?: any[];
+  tasks?: any[];
+  chatSessions?: any[];
+  taskQueues?: any[];
+  promptTemplates?: any[];
+  skills?: any;
+  mcpTools?: any;
+  knowledge?: any[];
+  tags?: any[];
+  artifactIndex?: any[];
+  executionLog?: any[];
   manifest?: any;
   createdAt?: Date;
   updatedAt?: Date;
@@ -19,6 +29,29 @@ export interface WorkspaceState {
 
 export class WorkspaceStateService {
   private static states: Map<string, WorkspaceState> = new Map();
+  private static saveTimers: Map<string, any> = new Map();
+
+  private static fileMap: Record<string, string> = {
+    manifest: 'manifest.json',
+    workflows: 'workflows.json',
+    agents: 'agents.json',
+    tasks: 'tasks.json',
+    skills: 'skills.json',
+    'mcp-tools': 'mcp-tools.json',
+    mcpTools: 'mcp-tools.json',
+    knowledge: 'knowledge.json',
+    tags: 'tags.json',
+    'artifact-index': 'artifact-index.json',
+    artifactIndex: 'artifact-index.json',
+    'execution-log': 'execution-log.json',
+    executionLog: 'execution-log.json',
+    'chat-sessions': 'chat-sessions.json',
+    chatSessions: 'chat-sessions.json',
+    'task-queues': 'task-queues.json',
+    taskQueues: 'task-queues.json',
+    'prompt-templates': 'prompt-templates.json',
+    promptTemplates: 'prompt-templates.json'
+  };
 
   /**
    * 确保工作流文件夹存在，并创建所有必要的目录和文件
@@ -49,11 +82,19 @@ export class WorkspaceStateService {
 
       // 创建必要的JSON文件（如果不存在）
       const jsonFiles: Record<string, any> = {
+        'WORKFLOWS/manifest.json': {
+          workspaceId: path.basename(workspacePath),
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        },
         'WORKFLOWS/workflows.json': [],
+        'WORKFLOWS/agents.json': [],
+        'WORKFLOWS/tasks.json': [],
         'WORKFLOWS/knowledge.json': [],
         'WORKFLOWS/tags.json': [],
         'WORKFLOWS/artifact-index.json': [],
         'WORKFLOWS/chat-sessions.json': [],
+        'WORKFLOWS/task-queues.json': [],
         'WORKFLOWS/prompt-templates.json': [],
         'WORKFLOWS/skills.json': [],
         'WORKFLOWS/mcp-tools.json': [],
@@ -87,29 +128,43 @@ export class WorkspaceStateService {
     const path = require('path');
 
     try {
-      const workflowsPath = path.join(workspacePath, 'WORKFLOWS', 'workflows.json');
-      const manifestPath = path.join(workspacePath, 'WORKFLOWS', 'manifest.json');
+      const workflowsDir = path.join(workspacePath, 'WORKFLOWS');
 
-      let workflows: any[] = [];
-      let manifest: any = {};
+      const readJson = (filename: string, fallback: any) => {
+        const filePath = path.join(workflowsDir, filename);
+        if (!fs.existsSync(filePath)) return fallback;
+        try {
+          const data = JSON.parse(fs.readFileSync(filePath, 'utf-8'));
+          if (Array.isArray(fallback)) return Array.isArray(data) ? data : fallback;
+          if (fallback && typeof fallback === 'object' && !Array.isArray(fallback)) {
+            return data && typeof data === 'object' && !Array.isArray(data) ? data : fallback;
+          }
+          return data ?? fallback;
+        } catch (e: any) {
+          logger.warn(`Failed to load workspace file ${filename}: ${e.message}`);
+          return fallback;
+        }
+      };
 
-      // Load workflows
-      if (fs.existsSync(workflowsPath)) {
-        const data = JSON.parse(fs.readFileSync(workflowsPath, 'utf-8'));
-        workflows = Array.isArray(data) ? data : [];
-      }
-
-      // Load manifest
-      if (fs.existsSync(manifestPath)) {
-        manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf-8'));
-      }
+      const manifest = readJson('manifest.json', {});
+      const workflows = readJson('workflows.json', []);
 
       return {
         workspaceId: manifest.workspaceId || path.basename(workspacePath),
         workspacePath,
         workflows,
         manifest,
-        agents: [],
+        agents: readJson('agents.json', []),
+        tasks: readJson('tasks.json', []),
+        chatSessions: readJson('chat-sessions.json', []),
+        taskQueues: readJson('task-queues.json', []),
+        promptTemplates: readJson('prompt-templates.json', []),
+        skills: readJson('skills.json', []),
+        mcpTools: readJson('mcp-tools.json', []),
+        knowledge: readJson('knowledge.json', []),
+        tags: readJson('tags.json', []),
+        artifactIndex: readJson('artifact-index.json', []),
+        executionLog: readJson('execution-log.json', []),
         updatedAt: new Date()
       };
     } catch (e: any) {
@@ -121,8 +176,46 @@ export class WorkspaceStateService {
   /**
    * 保存状态
    */
-  static saveState(state: WorkspaceState): void {
-    this.states.set(state.workspaceId, state);
+  static saveState(state: WorkspaceState): void;
+  static saveState(workspacePath: string, key: string, data: any): void;
+  static saveState(arg1: WorkspaceState | string, key?: string, data?: any): void {
+    if (typeof arg1 !== 'string') {
+      this.states.set(arg1.workspaceId, arg1);
+      return;
+    }
+
+    const fs = require('fs');
+    const path = require('path');
+    const workspacePath = arg1;
+    const filename = key ? this.fileMap[key] : null;
+    if (!filename) {
+      logger.warn(`Unknown workspace state key: ${key}`);
+      return;
+    }
+
+    const workflowsDir = path.join(workspacePath, 'WORKFLOWS');
+    const filePath = path.join(workflowsDir, filename);
+    const timerKey = `${workspacePath}:${filename}`;
+    const existing = this.saveTimers.get(timerKey);
+    if (existing) clearTimeout(existing);
+
+    const timer = setTimeout(() => {
+      try {
+        if (!fs.existsSync(workflowsDir)) {
+          fs.mkdirSync(workflowsDir, { recursive: true });
+        }
+        const tmpPath = filePath + '.tmp';
+        fs.writeFileSync(tmpPath, JSON.stringify(data, null, 2), 'utf-8');
+        fs.renameSync(tmpPath, filePath);
+      } catch (e: any) {
+        logger.error(`Failed to save workspace state ${filename}: ${e.message}`);
+      } finally {
+        this.saveTimers.delete(timerKey);
+      }
+    }, 500);
+
+    if (timer.unref) timer.unref();
+    this.saveTimers.set(timerKey, timer);
   }
 
   /**

@@ -13,6 +13,7 @@ const fs = require('fs');
 const config = require('./config');
 const logger = require('./utils/logger');
 const { errorHandler, notFoundHandler } = require('./middleware/errorHandler');
+const { authMiddleware } = require('./middleware/auth');
 const { rateLimit, safetyHeaders } = require('./middleware/safety');
 const FileService = require('./services/FileService');
 const WorkspaceStateService = require('./services/WorkspaceStateService');
@@ -75,6 +76,7 @@ app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 // Security middleware（只启用无副作用的安全中间件）
 app.use(rateLimit({ windowMs: 60000, max: 200 }));  // 200次/分钟，本地正常使用不会触发
 app.use(safetyHeaders());  // 添加安全响应头
+app.use(authMiddleware);
 
 // Static files - 使用 config.staticDir 指向 src/client
 app.use(express.static(config.staticDir));
@@ -259,11 +261,11 @@ try {
 SnapshotService.init(FileService.getWorkspaceRoot() || '');
 
 // Start server only when run directly (not when imported by tests)
-const PORT = config.port || 3000;
+const PORT = config.port ?? 3456;
 if (process.env.NODE_ENV !== 'test') {
-  server.listen(PORT, () => {
-    logger.info(`Server running at http://0.0.0.0:${PORT}`);
-    logger.info(`WebSocket available at ws://0.0.0.0:${PORT}/ws`);
+  server.listen(PORT, config.host, () => {
+    logger.info(`Server running at http://${config.host}:${PORT}`);
+    logger.info(`WebSocket available at ws://${config.host}:${PORT}/ws`);
     logger.info(`Static files served from: ${config.staticDir}`);
     logger.info(`Workspace root: ${FileService.getWorkspaceRoot()}`);
 
@@ -327,7 +329,7 @@ setInterval(() => {
  * Used by tests to create their own server instance.
  */
 function createApp() {
-  return { app };
+  return { app, server, broadcastService, wsServer };
 }
 
 module.exports = { app, createApp };

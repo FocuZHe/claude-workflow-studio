@@ -962,7 +962,7 @@ headers: {
 
 ```javascript
 // WebSocket 连接URL
-ws://localhost:3000/ws?api_key=xxx
+ws://localhost:3456/ws?api_key=xxx
 ```
 
 ### 6.3 API Key 管理

@@ -201,14 +201,16 @@ echo     Installation complete!
 echo   ==========================================
 echo.
 echo     Start the platform:
-echo       start.bat     - Start service (PM2 daemon)
-echo       npm start     - Direct start (port 3000)
-echo       npm run dev   - Dev mode (auto-restart)
+echo       npm start              - Direct start (port 3456)
+echo       npm start -- --port 3457
+echo       start.bat              - Start service (PM2 daemon, port 3456)
+echo       start.bat 3457         - Start service on a custom port
+echo       npm run dev            - Dev mode (auto-restart)
 echo.
 echo     Stop the platform:
 echo       stop.bat      - Stop service and save logs
 echo.
-echo     Web: http://localhost:3000
+echo     Web: http://localhost:3456
 echo.
 echo   ==========================================
 echo.

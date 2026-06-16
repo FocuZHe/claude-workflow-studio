@@ -1,49 +1,27 @@
+# Dependencies
 node_modules/
-tests/.temp-data/
-data_test_temp/
-*.log
-logs/
-.BACKUP/
-.DS_Store
-data/chat-workspace/
-workspace/
+
+# Environment and secrets
 .env
-.claude/
-multi-agent-platform.zip
-Claude Code 控制台.zip
-MCP/
+.env.*
+!.env.example
 data/api-key.json
 data/.keyfile
 data/api-keys.enc.json
-data/*.sqlite
-data/*.sqlite.bak
-data/*.migrated
-data/current-workspace.json
-data/skills/
-data/*.bak
-logs/
-skills/
-skills-lock.json
-.agents/
-技能/
-docs/task-breakdown.md
-docs/feedback-task-breakdown.md
-docs/javascript-es6-features.md
-docs/new-features-task-breakdown.md
-docs/workflow-enhance-agent2-frontend.md
-docs/workflow-enhance-agent3-backend.md
-docs/workflow-enhance-task-breakdown.md
-docs/real-time-agent-correction.md
-docs/opencode-subagent-analysis.md
-.agent-exec/
-.checkpoint/
-.subagent_agent1_skill.md
-.subagent_agent1_result.json
-task-execution-summary.md
-tests/.temp-test/
 
-# User data - should not be tracked
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Runtime user data
 WORKFLOWS/
+workspace/
+data/chat-workspace/
+data/current-workspace.json
 data/execution-logs.json
 data/tasks.json
 data/task-queues.json
@@ -56,3 +34,57 @@ data/session-store.json
 data/.task_cache.json
 data/prompt-templates.json
 data/prompt-templates.sqlite
+data/skills/
+data/*.sqlite
+data/*.sqlite-*
+data/*.db
+data/*.db-*
+data/*.bak
+data/*.migrated
+
+# Local agent and workspace state
+.claude/
+.agents/
+.agent-exec/
+.checkpoint/
+.BACKUP/
+MCP/
+技能/
+skills/
+skills-lock.json
+.subagent_*
+task-execution-summary.md
+
+# Tests and coverage
+coverage/
+.nyc_output/
+tests/.temp-data/
+tests/.temp-test/
+data_test_temp/
+
+# Build and tool caches
+*.tsbuildinfo
+.cache/
+.tmp/
+tmp/
+temp/
+
+# Editor and OS files
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+
+# Archives and generated exports
+*.zip
+
+# Project-generated docs
+docs/task-breakdown.md
+docs/feedback-task-breakdown.md
+docs/javascript-es6-features.md
+docs/new-features-task-breakdown.md
+docs/workflow-enhance-agent2-frontend.md
+docs/workflow-enhance-agent3-backend.md
+docs/workflow-enhance-task-breakdown.md
+docs/real-time-agent-correction.md
+docs/opencode-subagent-analysis.md

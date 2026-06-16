@@ -341,6 +341,8 @@ class WorkflowModel {
             const FileService = require('../services/FileService');
             const WorkspaceManager = require('../services/WorkspaceManager');
             const currentPath = FileService.runtimeWorkspaceRoot;
+            if (!currentPath)
+                return;
             const currentWs = WorkspaceManager.findByPath(currentPath);
             if (!currentWs)
                 return;
@@ -360,6 +362,8 @@ class WorkflowModel {
             const FileService = require('../services/FileService');
             const WorkspaceManager = require('../services/WorkspaceManager');
             const currentPath = FileService.runtimeWorkspaceRoot;
+            if (!currentPath)
+                return;
             const currentWs = WorkspaceManager.findByPath(currentPath);
             if (!currentWs)
                 return;

@@ -214,6 +214,7 @@ class DataStore {
     }
     _saveSqlite(data) {
         try {
+            this.ensureDir();
             // 备份
             if (fs.existsSync(this.sqlitePath)) {
                 try {
@@ -245,6 +246,7 @@ class DataStore {
     }
     _saveJson(data) {
         try {
+            this.ensureDir();
             const json = JSON.stringify(data, null, 2);
             if (fs.existsSync(this.filePath)) {
                 try {
