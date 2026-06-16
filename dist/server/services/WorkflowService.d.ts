@@ -156,8 +156,6 @@ export declare class WorkflowService {
      * Initialize WorkflowService with dependencies
      */
     static init(broadcastService: BroadcastService, claudeService?: any): void;
-    static _usesInjectedTestClaudeService(): boolean;
-    static _resolveModel(alias: string): string;
     /**
      * 修复卡在 'running' 的 executionLog 记录
      * 服务器重启后：
@@ -215,7 +213,6 @@ export declare class WorkflowService {
      * Returns immediately with runId, execution continues in background.
      */
     static execute(id: string, input?: any, params?: Record<string, any>, nodeInputs?: Record<string, any>): ExecuteResult;
-    static _executeWithInjectedClaudeService(workflowId: string, runId: string, input: any, workflow: WorkflowData): Promise<void>;
     /**
      * 带重试的主Agent执行 - 自动处理429等可重试错误
      */

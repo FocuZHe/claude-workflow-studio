@@ -43,7 +43,7 @@ class WsServer {
       const providedKey = query.api_key || req.headers['x-api-key'];
       const validKey = getApiKey();
 
-      if (validKey && (!providedKey || providedKey !== validKey)) {
+      if (!providedKey || providedKey !== validKey) {
         logger.warn('WebSocket connection rejected: invalid API key');
         socket.write('HTTP/1.1 401 Unauthorized\r\n\r\n');
         socket.destroy();
@@ -135,7 +135,6 @@ class WsServer {
       // Cleanup stale clients
       this.broadcastService.cleanupStaleClients();
     }, config.ws.heartbeatInterval);
-    if (this.heartbeatInterval.unref) this.heartbeatInterval.unref();
   }
 
   /**
@@ -150,10 +149,6 @@ class WsServer {
     if (this.wss) {
       this.wss.close();
       this.wss = null;
-    }
-
-    if (this.broadcastService && this.broadcastService.close) {
-      this.broadcastService.close();
     }
 
     logger.info('WebSocket server closed');

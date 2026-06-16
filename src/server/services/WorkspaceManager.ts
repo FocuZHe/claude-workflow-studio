@@ -53,8 +53,7 @@ export class WorkspaceManager extends EventEmitter {
   /**
    * 根据路径查找工作区
    */
-  static findByPath(wsPath: string | null | undefined): Workspace | undefined {
-    if (!wsPath) return undefined;
+  static findByPath(wsPath: string): Workspace | undefined {
     this.init();
     const resolved = path.resolve(wsPath);
     for (const ws of this._workspaces.values()) {

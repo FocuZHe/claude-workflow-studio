@@ -71,7 +71,7 @@ class BroadcastService extends events_1.EventEmitter {
         const client = this.clients.get(clientId);
         if (client && client.ws.readyState === ws_1.WebSocket.OPEN) {
             try {
-                client.ws.send(JSON.stringify({ type, payload: data, timestamp: new Date().toISOString() }));
+                client.ws.send(JSON.stringify({ type, payload: data }));
             }
             catch (err) {
                 this.clients.delete(clientId);
@@ -98,7 +98,7 @@ class BroadcastService extends events_1.EventEmitter {
      * 广播消息给所有连接的客户端
      */
     broadcast(type, data) {
-        const message = { type, payload: data, timestamp: new Date().toISOString() };
+        const message = { type, payload: data };
         const messageStr = JSON.stringify(message);
         this.clients.forEach((client, clientId) => {
             try {

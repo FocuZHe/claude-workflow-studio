@@ -894,7 +894,7 @@ Opus → Sonnet → Haiku
 
 | 参数 | 值 |
 |------|-----|
-| Web 服务器端口 | 3456（可用 PORT 覆盖） |
+| Web 服务器端口 | 3000 |
 | WebSocket 心跳 | 客户端 25 秒 / 服务端 30 秒超时 |
 | 断线重连 | 最多 10 次，最长 30 秒间隔 |
 | Agent 执行超时 | 30 分钟 |
@@ -1131,11 +1131,13 @@ workspace/<wsId>/
 
 - **API Key 鉴权**：首次启动自动生成，AES-256-GCM 加密存储
 - **API Key 端点本地限制**：`/api/auth/key` 仅允许 `127.0.0.1` 访问，防止远程获取明文密钥
+- **默认监听地址**：`127.0.0.1`（仅本地访问），可通过 `HOST=0.0.0.0` 显式开放局域网访问
 - **速率限制**：全局 200 次/分钟，防止暴力攻击和 DoS
 - **安全响应头**：
   - `X-Content-Type-Options: nosniff` — 防止 MIME 类型嗅探
   - `X-Frame-Options: DENY` — 防止点击劫持
   - `X-XSS-Protection: 1; mode=block` — XSS 防护
+- **Git 命令安全**：使用 `execFile` + 参数数组执行 Git 命令，避免命令注入
 - **工作区沙箱**：`--permission-mode acceptEdits` 限制工作区内写入
 - **路径穿越防护**：所有文件路径通过 resolvePath 校验
 - **Agent 内存沙箱**：每 10 秒监测 RSS，超过 2GB 自动终止进程

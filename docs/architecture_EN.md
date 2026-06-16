@@ -888,7 +888,7 @@ Unknown model → Haiku (fallback)
 
 | Parameter | Value |
 |-----------|-------|
-| Web Server Port | 3456 (override with PORT) |
+| Web Server Port | 3000 |
 | WebSocket Heartbeat | Client 25 seconds / Server 30 seconds timeout |
 | Reconnection | Max 10 times, max 30 seconds interval |
 | Agent Execution Timeout | 30 minutes |
@@ -1125,11 +1125,13 @@ workspace/<wsId>/
 
 - **API Key Authentication**: Auto-generated on first startup, AES-256-GCM encrypted storage
 - **API Key Endpoint Local Restriction**: `/api/auth/key` only allows `127.0.0.1` access, prevents remote retrieval of plaintext keys
+- **Default Listen Address**: `127.0.0.1` (local access only), can explicitly set `HOST=0.0.0.0` to allow LAN access
 - **Rate Limiting**: Global 200 requests/minute, prevents brute-force attacks and DoS
 - **Security Response Headers**:
   - `X-Content-Type-Options: nosniff` — Prevents MIME type sniffing
   - `X-Frame-Options: DENY` — Prevents clickjacking
   - `X-XSS-Protection: 1; mode=block` — XSS protection
+- **Git Command Security**: Uses `execFile` + argument arrays for Git commands, prevents command injection
 - **Workspace Sandbox**: `--permission-mode acceptEdits` restricts writes to workspace
 - **Path Traversal Prevention**: All file paths validated via resolvePath
 - **Agent Memory Sandbox**: Monitor RSS every 10 seconds, auto-terminate process if exceeds 2GB

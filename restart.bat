@@ -1,14 +1,10 @@
 @echo off
 cd /d "%~dp0"
 set "PATH=%PATH%;C:\Program Files\nodejs"
-set "DEFAULT_PORT=3456"
-if not "%~1"=="" set "PORT=%~1"
-if "%PORT%"=="" set "PORT=%DEFAULT_PORT%"
 
 echo ========================================
 echo   Restarting Service...
 echo ========================================
-echo   Port: %PORT%
 echo.
 
 :: Save logs before restart
@@ -22,7 +18,7 @@ call npx pm2 stop claude-console >nul 2>&1
 call npx pm2 delete claude-console >nul 2>&1
 
 echo Starting...
-call npx pm2 start dist/server/app.js --name claude-console --update-env
+call npx pm2 start dist/server/app.js --name claude-console
 
 echo.
 echo ========================================
@@ -30,6 +26,5 @@ call npx pm2 status
 echo ========================================
 echo.
 echo Service restarted!
-echo Visit http://localhost:%PORT%
 echo.
 pause

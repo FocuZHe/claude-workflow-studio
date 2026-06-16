@@ -3,23 +3,9 @@ const fs = require('fs');
 
 // 项目根目录（从 dist/server 向上两级）
 const PROJECT_ROOT = path.join(__dirname, '../..');
-const DEFAULT_PORT = 3456;
-
-function readPort(): number {
-  if (!process.env.PORT) {
-    return DEFAULT_PORT;
-  }
-
-  const port = Number(process.env.PORT);
-  if (!Number.isInteger(port) || port < 0 || port > 65535) {
-    return DEFAULT_PORT;
-  }
-
-  return port;
-}
 
 const config: any = {
-  port: readPort(),
+  port: parseInt(process.env.PORT!, 10) || 3000,
   host: process.env.HOST || '127.0.0.1',
 
   // Workspace root for file management
@@ -82,10 +68,10 @@ const config: any = {
   validate(): string[] {
     const warnings: string[] = [];
 
-    // PORT: must be a valid port number. 0 is allowed in tests for random ports.
+    // PORT: must be a valid port number (1–65535)
     if (process.env.PORT) {
-      const raw = Number(process.env.PORT);
-      if (!Number.isInteger(raw) || raw < 0 || raw > 65535) {
+      const raw = parseInt(process.env.PORT, 10);
+      if (isNaN(raw) || raw < 1 || raw > 65535) {
         warnings.push(`PORT 环境变量值无效: "${process.env.PORT}"，已回退到默认值 ${config.port}`);
       }
     }

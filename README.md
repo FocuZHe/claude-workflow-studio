@@ -7,7 +7,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/release-v1.6-blue?style=flat-square" alt="Release">
+  <img src="https://img.shields.io/badge/release-v1.7-blue?style=flat-square" alt="Release">
   <img src="https://img.shields.io/badge/platform-Windows-lightgrey?style=flat-square" alt="Platform">
   <img src="https://img.shields.io/badge/node-%3E%3D18-green?style=flat-square" alt="Node.js">
   <img src="https://img.shields.io/badge/claude--code-CLI-orange?style=flat-square" alt="Claude Code CLI">
@@ -30,30 +30,14 @@
 
 ## 快速开始
 
-**环境要求**：[Node.js 18+](https://nodejs.org/)；[Claude Code CLI](https://docs.anthropic.com/en/docs/claude-code) 可选，未安装时可在设置中配置 API Key 使用 SDK 模式。
+**环境要求**：[Node.js 18+](https://nodejs.org/) 和 [Claude Code CLI](https://docs.anthropic.com/en/docs/claude-code)
 
-**推荐方式（跨平台）**：
-
-```bash
-npm run setup
-npm start
-```
-
-启动后访问 http://localhost:3456。
-
-**自定义端口**：
+**安装**：解压 ZIP → 双击 `install.bat` → 双击 `start.bat` → 访问 http://localhost:3000
 
 ```bash
-npm start -- --port 3457
+npm install    # 或双击 install.bat
+npm start      # 或双击 start.bat
 ```
-
-也可以使用环境变量：
-
-```powershell
-$env:PORT=3457; npm start
-```
-
-**Windows 双击方式（可选）**：解压 ZIP → 双击 `install.bat` → 双击 `start.bat`。如需指定端口，在命令行运行 `start.bat 3457`。
 
 ---
 
@@ -139,21 +123,19 @@ $env:PORT=3457; npm start
 ## 常用命令
 
 ```bash
-npm run setup                 # 安装依赖并编译
-npm start                     # 启动服务器（默认 http://localhost:3456）
-npm start -- --port 3457      # 指定端口启动
-npm run dev                   # 开发模式（自动重启，同样支持 -- --port）
-npm test                      # 运行测试
+npm start              # 启动服务器
+npm run dev            # 开发模式（自动重启）
+npm test               # 运行测试
 ```
 
 ### 批处理脚本（Windows）
 
 | 脚本 | 说明 |
 |------|------|
-| `install.bat` | 一键安装依赖并编译 |
-| `start.bat` | 启动服务（默认端口 3456，可用 `start.bat 3457` 指定端口） |
+| `install.bat` | 一键安装依赖 |
+| `start.bat` | 启动服务 |
 | `stop.bat` | 停止服务 |
-| `restart.bat` | 重启服务（可用 `restart.bat 3457` 指定端口） |
+| `restart.bat` | 重启服务 |
 | `logs.bat` | 查看日志 |
 | `add-to-startup.bat` | 添加开机自启 |
 | `remove-from-startup.bat` | 取消开机自启 |
