@@ -73,6 +73,7 @@ if (process.env.PORT) {
   }
 }
 
-// Ensure we're in the project root so all relative paths resolve correctly
+// 切换到项目根目录，确保 data/、logs/ 等相对路径正确解析
+// 注意：这会影响整个进程的 cwd，所有 process.cwd() 调用将返回项目根目录
 process.chdir(path.join(__dirname, '..'));
 require('../dist/server/app.js');

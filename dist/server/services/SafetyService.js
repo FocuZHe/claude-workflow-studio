@@ -7,6 +7,8 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.SafetyService = void 0;
 class SafetyService {
     static rules = [];
+    static threats = [];
+    static MAX_THREATS = 1000;
     /**
      * 初始化
      */
@@ -75,20 +77,42 @@ class SafetyService {
         return { score };
     }
     /**
+     * 记录威胁（供 detectThreats 中间件调用）
+     */
+    static logThreat(threat) {
+        this.threats.unshift(threat);
+        if (this.threats.length > this.MAX_THREATS) {
+            this.threats.length = this.MAX_THREATS;
+        }
+    }
+    /**
      * 获取威胁统计
      */
     static getThreatStats() {
-        return { todayTotal: 0, blockedCount: 0 };
+        const today = new Date().toISOString().slice(0, 10);
+        const todayThreats = this.threats.filter(t => t.timestamp.slice(0, 10) === today);
+        const blockedCount = todayThreats.filter(t => t.severity === 'high').length;
+        return { todayTotal: todayThreats.length, blockedCount };
     }
     /**
      * 获取威胁列表
      */
     static getThreats(params = {}) {
         const page = params.page || 1;
-        const limit = params.limit || 20;
+        const limit = Math.min(params.limit || 20, 100);
+        let filtered = this.threats;
+        if (params.type) {
+            filtered = filtered.filter(t => t.type === params.type);
+        }
+        if (params.severity) {
+            filtered = filtered.filter(t => t.severity === params.severity);
+        }
+        const total = filtered.length;
+        const start = (page - 1) * limit;
+        const data = filtered.slice(start, start + limit);
         return {
-            data: [],
-            meta: { total: 0, page, limit }
+            data,
+            meta: { total, page, limit }
         };
     }
 }

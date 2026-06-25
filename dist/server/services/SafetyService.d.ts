@@ -9,8 +9,20 @@ export interface SafetyRule {
     enabled: boolean;
     config: Record<string, any>;
 }
+export interface ThreatRecord {
+    ip: string;
+    type: string;
+    pattern: string;
+    severity: string;
+    description: string;
+    url: string;
+    method: string;
+    timestamp: string;
+}
 export declare class SafetyService {
     private static rules;
+    private static threats;
+    private static readonly MAX_THREATS;
     /**
      * 初始化
      */
@@ -46,6 +58,10 @@ export declare class SafetyService {
         score: number;
     };
     /**
+     * 记录威胁（供 detectThreats 中间件调用）
+     */
+    static logThreat(threat: ThreatRecord): void;
+    /**
      * 获取威胁统计
      */
     static getThreatStats(): {
@@ -61,7 +77,7 @@ export declare class SafetyService {
         type?: string;
         severity?: string;
     }): {
-        data: any[];
+        data: ThreatRecord[];
         meta: {
             total: number;
             page: number;

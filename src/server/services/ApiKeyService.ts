@@ -157,6 +157,11 @@ export class ApiKeyService {
   static save(data: ApiKeyData): void {
     try {
       if (!fs.existsSync(ApiKeyService._dataDir)) fs.mkdirSync(ApiKeyService._dataDir, { recursive: true });
+      // 写入前备份现有文件
+      if (fs.existsSync(ApiKeyService._filePath)) {
+        const bakPath = ApiKeyService._filePath + '.bak';
+        fs.copyFileSync(ApiKeyService._filePath, bakPath);
+      }
       fs.writeFileSync(ApiKeyService._filePath, JSON.stringify(data, null, 2), 'utf-8');
     } catch (e: any) { logger.error(`Failed to save API key config: ${e.message}`); throw e; }
   }

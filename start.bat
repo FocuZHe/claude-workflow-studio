@@ -62,9 +62,16 @@ if not exist "node_modules" (
 
 :: Build TypeScript
 echo [0/4] Building TypeScript...
-call npm run build >nul 2>&1
+call npm run build
 if errorlevel 1 (
-    echo [WARNING] TypeScript build failed, using existing dist/ files...
+    echo [WARNING] TypeScript build failed. Using existing dist/ files.
+    echo          You may be running outdated code. Continue? (Y/N)
+    set /p buildconfirm=
+    if /i not "!buildconfirm!"=="Y" (
+        echo Aborted.
+        pause
+        exit /b 1
+    )
 ) else (
     echo     Build complete.
 )

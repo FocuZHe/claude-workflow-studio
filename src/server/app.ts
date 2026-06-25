@@ -254,6 +254,13 @@ app.get('/api/health', async (req: any, res: any) => {
   });
 });
 
+// 手动刷新 CLI 缓存（安装/卸载 Claude CLI 后立即生效）
+app.post('/api/health/refresh', (req: any, res: any) => {
+  cliVersionCache = null;
+  cliVersionPromise = null;
+  res.json({ success: true, message: 'CLI cache cleared' });
+});
+
 // SPA fallback - 所有非API请求返回 index.html（支持前端路由）
 app.get('*', (req: any, res: any) => {
   if (req.path.startsWith('/api/') || req.path === '/ws') {

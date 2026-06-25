@@ -8,6 +8,9 @@ const FileService = require('../services/FileService');
 const WorkspaceStateService = require('../services/WorkspaceStateService');
 const { AppError } = require('../middleware/errorHandler');
 // In-memory undo cache store (keyed by file path)
+// 限制每个文件最多保存 50 条历史，总缓存上限 200 个文件，防止内存泄漏
+const UNDO_MAX_HISTORY = 50;
+const UNDO_MAX_FILES = 200;
 const undoCacheStore = new Map();
 // Exposed for workspace deactivation cleanup
 // When workspacePath is provided, only clears entries under that path
@@ -48,7 +51,19 @@ router.post('/undo-cache', (req, res) => {
     if (!filePath || !Array.isArray(history)) {
         throw new AppError('VALIDATION_ERROR', 'path and history array are required', 400);
     }
-    undoCacheStore.set(filePath, { history, currentIndex });
+    // 限制单文件历史条数，超出截断保留最近的
+    const trimmedHistory = history.length > UNDO_MAX_HISTORY
+        ? history.slice(-UNDO_MAX_HISTORY)
+        : history;
+    const adjustedIndex = history.length > UNDO_MAX_HISTORY
+        ? Math.max(0, (currentIndex || 0) - (history.length - UNDO_MAX_HISTORY))
+        : currentIndex;
+    // LRU 淘汰：缓存文件数超上限时删除最早写入的
+    if (undoCacheStore.size >= UNDO_MAX_FILES && !undoCacheStore.has(filePath)) {
+        const oldestKey = undoCacheStore.keys().next().value;
+        undoCacheStore.delete(oldestKey);
+    }
+    undoCacheStore.set(filePath, { history: trimmedHistory, currentIndex: adjustedIndex });
     res.json({ success: true, data: null });
 });
 /**

@@ -78,6 +78,11 @@ class ApiKeyService {
         try {
             if (!fs_1.default.existsSync(ApiKeyService._dataDir))
                 fs_1.default.mkdirSync(ApiKeyService._dataDir, { recursive: true });
+            // 写入前备份现有文件
+            if (fs_1.default.existsSync(ApiKeyService._filePath)) {
+                const bakPath = ApiKeyService._filePath + '.bak';
+                fs_1.default.copyFileSync(ApiKeyService._filePath, bakPath);
+            }
             fs_1.default.writeFileSync(ApiKeyService._filePath, JSON.stringify(data, null, 2), 'utf-8');
         }
         catch (e) {

@@ -50,6 +50,17 @@ router.post('/', (req, res, next) => {
         if (!wsPath || typeof wsPath !== 'string') {
             throw new AppError('VALIDATION_ERROR', 'path is required and must be a string', 400);
         }
+        // 校验路径是否存在且为目录
+        const resolvedPath = require('path').resolve(wsPath);
+        try {
+            const stat = require('fs').statSync(resolvedPath);
+            if (!stat.isDirectory()) {
+                throw new AppError('VALIDATION_ERROR', '指定路径不是目录', 400);
+            }
+        }
+        catch (e) {
+            throw new AppError('NOT_FOUND', `工作区路径不存在或不可访问: ${wsPath}`, 404);
+        }
         // 检查是否已激活（按路径去重）
         const existing = WorkspaceManager.findByPath(wsPath);
         if (existing) {

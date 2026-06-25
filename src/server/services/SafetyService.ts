@@ -11,8 +11,21 @@ export interface SafetyRule {
   config: Record<string, any>;
 }
 
+export interface ThreatRecord {
+  ip: string;
+  type: string;
+  pattern: string;
+  severity: string;
+  description: string;
+  url: string;
+  method: string;
+  timestamp: string;
+}
+
 export class SafetyService {
   private static rules: SafetyRule[] = [];
+  private static threats: ThreatRecord[] = [];
+  private static readonly MAX_THREATS = 1000;
 
   /**
    * 初始化
@@ -90,21 +103,47 @@ export class SafetyService {
   }
 
   /**
+   * 记录威胁（供 detectThreats 中间件调用）
+   */
+  static logThreat(threat: ThreatRecord): void {
+    this.threats.unshift(threat);
+    if (this.threats.length > this.MAX_THREATS) {
+      this.threats.length = this.MAX_THREATS;
+    }
+  }
+
+  /**
    * 获取威胁统计
    */
   static getThreatStats(): { todayTotal: number; blockedCount: number } {
-    return { todayTotal: 0, blockedCount: 0 };
+    const today = new Date().toISOString().slice(0, 10);
+    const todayThreats = this.threats.filter(t => t.timestamp.slice(0, 10) === today);
+    const blockedCount = todayThreats.filter(t => t.severity === 'high').length;
+    return { todayTotal: todayThreats.length, blockedCount };
   }
 
   /**
    * 获取威胁列表
    */
-  static getThreats(params: { page?: number; limit?: number; type?: string; severity?: string } = {}): { data: any[]; meta: { total: number; page: number; limit: number } } {
+  static getThreats(params: { page?: number; limit?: number; type?: string; severity?: string } = {}): { data: ThreatRecord[]; meta: { total: number; page: number; limit: number } } {
     const page = params.page || 1;
-    const limit = params.limit || 20;
+    const limit = Math.min(params.limit || 20, 100);
+
+    let filtered = this.threats;
+    if (params.type) {
+      filtered = filtered.filter(t => t.type === params.type);
+    }
+    if (params.severity) {
+      filtered = filtered.filter(t => t.severity === params.severity);
+    }
+
+    const total = filtered.length;
+    const start = (page - 1) * limit;
+    const data = filtered.slice(start, start + limit);
+
     return {
-      data: [],
-      meta: { total: 0, page, limit }
+      data,
+      meta: { total, page, limit }
     };
   }
 }
