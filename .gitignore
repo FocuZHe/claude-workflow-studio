@@ -1,6 +1,8 @@
 node_modules/
 tests/.temp-data/
 data_test_temp/
+# 构建产物：不应纳入版本控制，应通过 npm run build 重新生成
+dist/
 *.log
 logs/
 .BACKUP/

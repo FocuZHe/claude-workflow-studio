@@ -332,17 +332,8 @@ window.SettingsPage = (() => {
     }
     async function showConfigModal(existing) {
         const isEdit = !!existing;
-        // Fetch full key for editing
-        let fullKey = '';
-        if (isEdit) {
-            try {
-                const r = await API.getApiKey(existing.id);
-                fullKey = r?.data?.key || '';
-            }
-            catch (e) {
-                console.error('Failed to fetch API key:', e);
-            }
-        }
+        // 安全策略：编辑时不再从服务器拉取解密后的明文密钥
+        // 留空表示沿用原密钥（updateConfig 已支持空值跳过更新）
         Modal.open({
             title: isEdit ? '编辑 API 配置' : '添加 API 配置',
             body: `
@@ -351,9 +342,9 @@ window.SettingsPage = (() => {
           <input type="text" class="input" id="cfg-name" value="${escapeHtml(existing?.name || '')}" placeholder="如: 我的 Claude" style="width:100%;">
         </div>
         <div class="form-group">
-          <label class="form-label">API Key *</label>
+          <label class="form-label">API Key ${isEdit ? '（留空不修改）' : '*'}</label>
           <div style="position:relative;">
-            <input type="password" class="input" id="cfg-apikey" value="${escapeHtml(fullKey)}" placeholder="${isEdit ? '••••••••（留空不修改）' : 'sk-ant-...'}" style="width:100%;padding-right:36px;">
+            <input type="password" class="input" id="cfg-apikey" value="" placeholder="${isEdit ? '••••••••（留空不修改）' : 'sk-ant-...'}" style="width:100%;padding-right:36px;">
             <button id="cfg-eye-btn" title="显示" style="position:absolute;right:4px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--text-muted);">${Icon.svg('eye-off', 14)}</button>
           </div>
         </div>
@@ -441,7 +432,7 @@ window.SettingsPage = (() => {
             try {
                 if (isEdit) {
                     const updateData = { name, modelMappings };
-                    if (apiKey && apiKey !== fullKey)
+                    if (apiKey)
                         updateData.apiKey = apiKey;
                     updateData.baseUrl = baseUrl;
                     await API.updateApiConfig(existing.id, updateData);

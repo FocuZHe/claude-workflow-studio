@@ -48,20 +48,40 @@ export class TerminalService {
     const cols = 80;
     const rows = 24;
 
+    // 基础校验：cwd 必须是字符串且存在（防止崩溃）
+    let resolvedCwd: string = cwd || os.homedir();
+    if (typeof resolvedCwd !== 'string') {
+      resolvedCwd = os.homedir();
+    } else {
+      try {
+        const fs = require('fs');
+        const path = require('path');
+        const resolved = path.resolve(resolvedCwd);
+        const stat = fs.statSync(resolved);
+        if (!stat.isDirectory()) {
+          resolvedCwd = os.homedir();
+        } else {
+          resolvedCwd = resolved;
+        }
+      } catch (_) {
+        resolvedCwd = os.homedir();
+      }
+    }
+
     try {
       const ptyProcess = pty.spawn(shell, [], {
         name: 'xterm-256color',
         cols,
         rows,
-        cwd: cwd || os.homedir(),
+        cwd: resolvedCwd,
         env: { ...process.env, TERM: 'xterm-256color' },
       });
 
       const session: any = {
         id: ptyProcess.pid.toString(),
-        name: cwd || shell,
+        name: resolvedCwd || shell,
         status: 'active',
-        cwd: cwd || os.homedir(),
+        cwd: resolvedCwd,
         createdAt: new Date(),
         cols,
         rows,
@@ -93,7 +113,7 @@ export class TerminalService {
       });
 
       this.sessions.set(session.id, session);
-      logger.info(`Terminal created: ${session.id} (shell: ${shell}, cwd: ${cwd})`);
+      logger.info(`Terminal created: ${session.id} (shell: ${shell}, cwd: ${resolvedCwd})`);
 
       return {
         id: session.id,

@@ -36,10 +36,15 @@ class WsServer {
                 return;
             }
             // Validate API key from query param or header
+            // 行为与 HTTP authMiddleware 一致：未配置 key 时放行所有连接
             const query = url.parse(req.url, true).query;
             const providedKey = query.api_key || req.headers['x-api-key'];
             const validKey = getApiKey();
-            if (!providedKey || providedKey !== validKey) {
+            // 未配置 API Key → 认证关闭，放行（与 HTTP 行为一致）
+            if (validKey === null || validKey === undefined) {
+                // pass through to upgrade
+            }
+            else if (!providedKey || providedKey !== validKey) {
                 logger.warn('WebSocket connection rejected: invalid API key');
                 socket.write('HTTP/1.1 401 Unauthorized\r\n\r\n');
                 socket.destroy();
@@ -94,7 +99,8 @@ class WsServer {
         // Send welcome message
         this.broadcastService.sendToClient(clientId, 'welcome', {
             clientId,
-            message: 'Connected to Multi-Agent Platform WebSocket'
+            message: 'Connected to Multi-Agent Platform WebSocket',
+            timestamp: new Date().toISOString()
         });
     }
     /**

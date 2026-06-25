@@ -9,14 +9,14 @@ Usage:
   multi-agent-platform [options]
 
 Options:
-  -p, --port <port>   Web server port (default: 3456)
-      --host <host>   Bind host (default: 0.0.0.0)
+  -p, --port <port>   Web server port (default: 3000)
+      --host <host>   Bind host (default: 127.0.0.1; use 0.0.0.0 for LAN access)
   -h, --help          Show this help
 
 Examples:
   claude-workflow-studio
-  claude-workflow-studio --port 3457
-  npm start -- --port 3457
+  claude-workflow-studio --port 3001
+  npm start -- --port 3001
 `);
 }
 

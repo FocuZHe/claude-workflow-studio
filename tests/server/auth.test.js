@@ -48,8 +48,8 @@ describe('Auth Middleware', () => {
     process.env.API_KEY = TEST_API_KEY;
 
     // Clear require cache so auth.js re-reads the env var
-    delete require.cache[require.resolve('../../src/server/middleware/auth')];
-    delete require.cache[require.resolve('../../src/server/app')];
+    delete require.cache[require.resolve('../../dist/server/middleware/auth')];
+    delete require.cache[require.resolve('../../dist/server/app')];
 
     const { createApp } = require('../../dist/server/app');
     const { app } = createApp();
@@ -65,8 +65,8 @@ describe('Auth Middleware', () => {
       process.env.API_KEY = originalApiKey;
     }
     // Clear cache again so other tests get the default (no key) behavior
-    delete require.cache[require.resolve('../../src/server/middleware/auth')];
-    delete require.cache[require.resolve('../../src/server/app')];
+    delete require.cache[require.resolve('../../dist/server/middleware/auth')];
+    delete require.cache[require.resolve('../../dist/server/app')];
     return new Promise(resolve => server.close(resolve));
   });
 
@@ -145,8 +145,8 @@ describe('Auth Middleware - disabled (no API_KEY)', () => {
   before(async () => {
     // Ensure API_KEY is NOT set
     delete process.env.API_KEY;
-    delete require.cache[require.resolve('../../src/server/middleware/auth')];
-    delete require.cache[require.resolve('../../src/server/app')];
+    delete require.cache[require.resolve('../../dist/server/middleware/auth')];
+    delete require.cache[require.resolve('../../dist/server/app')];
 
     const { createApp } = require('../../dist/server/app');
     const { app } = createApp();
@@ -157,8 +157,8 @@ describe('Auth Middleware - disabled (no API_KEY)', () => {
   });
 
   after(() => {
-    delete require.cache[require.resolve('../../src/server/middleware/auth')];
-    delete require.cache[require.resolve('../../src/server/app')];
+    delete require.cache[require.resolve('../../dist/server/middleware/auth')];
+    delete require.cache[require.resolve('../../dist/server/app')];
     return new Promise(resolve => server.close(resolve));
   });
 

@@ -90,7 +90,7 @@ export class BroadcastService extends EventEmitter {
     const client = this.clients.get(clientId);
     if (client && client.ws.readyState === WebSocket.OPEN) {
       try {
-        client.ws.send(JSON.stringify({ type, payload: data }));
+        client.ws.send(JSON.stringify({ type, payload: data, timestamp: new Date().toISOString() }));
       } catch (err) {
         this.clients.delete(clientId);
       }

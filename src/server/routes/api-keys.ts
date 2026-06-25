@@ -43,20 +43,8 @@ router.put('/:id', (req: any, res: any, next: any) => {
   }
 });
 
-// GET /api/keys/:id/key — get decrypted key
-router.get('/:id/key', (req: any, res: any, next: any) => {
-  try {
-    const data = ApiKeyService.load();
-    const config = data.configs.find((c: any) => c.id === req.params.id);
-    if (!config) return res.status(404).json({ success: false, error: '配置不存在' });
-    const key = ApiKeyService.decrypt(config.apiKeyEncrypted);
-    if (!key) return res.status(400).json({ success: false, error: '解密失败' });
-    res.json({ success: true, data: { key } });
-  } catch (err) {
-    logger.error('Failed to get API key:', err);
-    next(err);
-  }
-});
+// 注：已移除 GET /api/keys/:id/key 端点（返回解密后的明文密钥属于安全风险）
+// 编辑配置时，前端 API Key 字段留空表示不修改原密钥（见 SettingsPage）
 
 // DELETE /api/keys/:id — delete config
 router.delete('/:id', (req: any, res: any, next: any) => {

@@ -31,12 +31,13 @@ class ApiKeyService {
             }
             else {
                 ApiKeyService._encryptionKey = crypto_1.default.randomBytes(32);
-                fs_1.default.writeFileSync(keyFile, ApiKeyService._encryptionKey.toString('hex'), 'utf-8');
+                // 设置文件权限 0600：仅所有者可读写
+                fs_1.default.writeFileSync(keyFile, ApiKeyService._encryptionKey.toString('hex'), { encoding: 'utf-8', mode: 0o600 });
             }
         }
         catch (e) {
-            logger.warn('Failed to load/generate encryption key, using fallback');
-            ApiKeyService._encryptionKey = crypto_1.default.createHash('sha256').update(process.cwd()).digest();
+            // 不再使用 process.cwd() 等公开信息作为弱密钥回退，直接抛错阻止启动
+            throw new Error(`Failed to load/generate encryption key file (${keyFile}): ${e.message}. Aborting to prevent weak key.`);
         }
         return ApiKeyService._encryptionKey;
     }

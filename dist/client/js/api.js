@@ -188,7 +188,7 @@ window.API = (() => {
         deleteApiConfig: (id) => del(`/api-keys/${id}`),
         setDefaultApiConfig: (id) => put(`/api-keys/${id}/default`),
         testApiConfig: (id) => get(`/api-keys/${id}/test`),
-        getApiKey: (id) => get(`/api-keys/${id}/key`),
+        // 注：已移除 getApiKey(id) — 服务器不再暴露解密后的明文密钥
         respondApproval: (requestId, decision, comment) => post('/workflows/approval/respond', { requestId, decision, comment }),
         stopWorkflow: (id) => post(`/workflows/${id}/stop`),
         skipWorkflowNode: (id, nodeId) => post(`/workflows/${id}/skip-node`, { nodeId }),

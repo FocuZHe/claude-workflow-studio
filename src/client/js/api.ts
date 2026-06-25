@@ -82,7 +82,7 @@ interface ApiAPI {
   deleteApiConfig: (id: string) => Promise<any>;
   setDefaultApiConfig: (id: string) => Promise<any>;
   testApiConfig: (id: string) => Promise<any>;
-  getApiKey: (id: string) => Promise<any>;
+  // 注：已移除 getApiKey(id) — 服务器不再暴露解密后的明文密钥
   respondApproval: (requestId: string, decision: string, comment?: string) => Promise<any>;
   stopWorkflow: (id: string) => Promise<any>;
   skipWorkflowNode: (id: string, nodeId: string) => Promise<any>;
@@ -392,7 +392,7 @@ interface ApiAPI {
     deleteApiConfig: (id: string) => del(`/api-keys/${id}`),
     setDefaultApiConfig: (id: string) => put(`/api-keys/${id}/default`),
     testApiConfig: (id: string) => get(`/api-keys/${id}/test`),
-    getApiKey: (id: string) => get(`/api-keys/${id}/key`),
+    // 注：已移除 getApiKey(id) — 服务器不再暴露解密后的明文密钥
 
     respondApproval: (requestId: string, decision: string, comment?: string) => post('/workflows/approval/respond', { requestId, decision, comment }),
     stopWorkflow: (id: string) => post(`/workflows/${id}/stop`),

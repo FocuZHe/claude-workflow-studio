@@ -1775,6 +1775,12 @@ ${mergePrompt}
             }
             case 'execute_command':
             case 'bash': {
+                // 安全模型说明：
+                // - 此处使用 exec（shell 模式）是刻意设计：AI Agent 作为用户授权的执行体，
+                //   需要支持管道 |、重定向 >、命令链 && 等 shell 特性才能完成工作流任务。
+                // - 切换为 execFile 会破坏这些合法功能，且此处不存在"命令注入"风险：
+                //   命令由 AI 基于推理生成，并非直接拼接用户可控字符串。
+                // - 现有防护：cwd 已限制在 workingDir 内、60s 超时、maxBuffer 限制、windowsHide。
                 const cmd = toolInput.command || toolInput.cmd || '';
                 if (!cmd)
                     return { type: 'tool_result', tool_use_id: toolId, content: 'Error: No command provided' };

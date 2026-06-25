@@ -281,7 +281,9 @@ esac
             catch (_) { }
             const spawnOptions = {
                 cwd: workingDir,
-                shell: true,
+                // 仅在 Windows 上启用 shell：spawn 无法直接找到 claude.cmd/.bat
+                // 在 Linux/Mac 上 claude 是可执行文件，无需 shell，避免参数被 shell 解释
+                shell: process.platform === 'win32',
                 stdio: ['pipe', 'pipe', 'pipe'],
                 env: { ...process.env },
                 windowsHide: true,
@@ -291,7 +293,7 @@ esac
                 spawnOptions.creationFlags = 0x08000000;
             }
             const proc = (0, child_process_1.spawn)('claude', args, spawnOptions);
-            // 内存监控
+            // 内存监控（跨平台）
             const MAX_MEMORY_MB = 2048;
             let memMonitor = null;
             const procPid = proc.pid;
@@ -299,8 +301,19 @@ esac
                 memMonitor = setInterval(() => {
                     try {
                         const { execSync } = require('child_process');
-                        const out = execSync(`powershell -Command "(Get-Process -Id ${procPid}).WorkingSet64"`, { encoding: 'utf-8', timeout: 5000, windowsHide: true });
-                        const memBytes = parseInt(out.trim(), 10);
+                        let memBytes = NaN;
+                        if (process.platform === 'win32') {
+                            // Windows: powershell 获取 WorkingSet64（字节）
+                            const out = execSync(`powershell -Command "(Get-Process -Id ${procPid}).WorkingSet64"`, { encoding: 'utf-8', timeout: 5000, windowsHide: true });
+                            memBytes = parseInt(out.trim(), 10);
+                        }
+                        else {
+                            // Linux/Mac: ps 获取 RSS（KB），需转换为字节
+                            const out = execSync(`ps -o rss= -p ${procPid}`, { encoding: 'utf-8', timeout: 5000 });
+                            const rssKb = parseInt(out.trim(), 10);
+                            if (!isNaN(rssKb))
+                                memBytes = rssKb * 1024;
+                        }
                         if (!isNaN(memBytes)) {
                             const memMB = memBytes / (1024 * 1024);
                             if (memMB > MAX_MEMORY_MB) {
@@ -314,6 +327,7 @@ esac
                     }
                     catch (_) { }
                 }, 10000);
+                memMonitor.unref?.();
             }
             // 清理函数
             const cleanupExecDir = () => {

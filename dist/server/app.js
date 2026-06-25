@@ -13,7 +13,9 @@ const fs = require('fs');
 const config = require('./config');
 const logger = require('./utils/logger');
 const { errorHandler, notFoundHandler } = require('./middleware/errorHandler');
-const { rateLimit, safetyHeaders } = require('./middleware/safety');
+const { rateLimit, safetyHeaders, sanitizeInput, detectThreats } = require('./middleware/safety');
+const { authMiddleware } = require('./middleware/auth');
+const auditMiddleware = require('./middleware/audit');
 const FileService = require('./services/FileService');
 const WorkspaceStateService = require('./services/WorkspaceStateService');
 const WorkspaceManager = require('./services/WorkspaceManager');
@@ -61,16 +63,39 @@ const TerminalService = require('./services/TerminalService');
 const app = express();
 const server = http.createServer(app);
 // Middleware
+// CORS: 仅允许本地来源，避免任意网页通过 CSRF 调用本地 API
+const allowedOrigins = (process.env.CORS_ORIGIN || '')
+    .split(',')
+    .map(s => s.trim())
+    .filter(Boolean);
+const defaultOrigins = [
+    'http://localhost:3000',
+    'http://127.0.0.1:3000',
+    'http://localhost:' + (config.port || 3000),
+    'http://127.0.0.1:' + (config.port || 3000),
+];
+const corsOrigin = allowedOrigins.length > 0 ? allowedOrigins : defaultOrigins;
 app.use(cors({
-    origin: true, // 允许所有来源（本地开发工具，无需限制）
+    origin(origin, cb) {
+        // 允许同源/无 Origin 头（curl、Postman、桌面应用）
+        if (!origin || corsOrigin.indexOf(origin) !== -1)
+            return cb(null, true);
+        return cb(null, false);
+    },
     credentials: true
 }));
 app.use(morgan('dev'));
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
-// Security middleware（只启用无副作用的安全中间件）
-app.use(rateLimit({ windowMs: 60000, max: 200 })); // 200次/分钟，本地正常使用不会触发
-app.use(safetyHeaders()); // 添加安全响应头
+// Security middleware
+app.use(rateLimit({ windowMs: 60000, max: 120 })); // 120 次/分钟
+app.use(safetyHeaders());
+app.use(sanitizeInput());
+app.use(detectThreats());
+app.use(auditMiddleware);
+// 认证中间件：注册在根路径，auth 内部自行判断是否跳过
+// （不能挂载到 /api/ 上，否则 req.path 会被剥离前缀导致 shouldSkip 误判）
+app.use(authMiddleware);
 // Static files - 使用 config.staticDir 指向 src/client
 app.use(express.static(config.staticDir));
 // xterm.js 静态文件（从 node_modules 提供）
@@ -105,11 +130,19 @@ app.use('/api/memory', memoryRouter);
 app.use('/api/safety', safetyRouter);
 app.use('/api/knowledge', knowledgeRouter);
 app.use('/api/api-keys', apiKeysRouter);
-// Auth key endpoint - 前端用于获取API key（仅允许本地访问）
+// Auth key endpoint - 前端用于获取API key（仅允许真正的本地访问）
 app.get('/api/auth/key', (req, res) => {
-    const clientIp = req.ip || req.connection?.remoteAddress || '';
+    // 防御 DNS 重绑定：要求 Host 头为本机
+    const host = (req.headers['host'] || '').toLowerCase();
+    const hostOk = host.startsWith('localhost:') || host.startsWith('127.0.0.1:') || host.startsWith('localhost');
+    // 拒绝任何代理转发请求（X-Forwarded-For 表明非直连本地）
+    const xff = req.headers['x-forwarded-for'] || req.headers['x-real-ip'];
+    if (xff) {
+        return res.status(403).json({ success: false, error: '仅允许本地直连访问' });
+    }
+    const clientIp = req.ip || req.socket?.remoteAddress || req.connection?.remoteAddress || '';
     const isLocal = clientIp === '127.0.0.1' || clientIp === '::1' || clientIp === '::ffff:127.0.0.1' || clientIp === 'localhost';
-    if (!isLocal) {
+    if (!isLocal || !hostOk) {
         return res.status(403).json({ success: false, error: '仅允许本地访问' });
     }
     try {
@@ -276,8 +309,12 @@ process.on('uncaughtException', (err) => {
         code: err?.code,
         name: err?.name
     });
-    // 给日志写入一点时间，然后优雅退出（PM2会自动重启）
-    setTimeout(() => process.exit(1), 1000);
+    // 立即停止接受新请求，避免在不确定状态下继续处理
+    try {
+        server.close();
+    }
+    catch (e) { /* ignore */ }
+    gracefulShutdown('uncaughtException');
 });
 process.on('unhandledRejection', (reason, promise) => {
     logger.error('Unhandled Rejection:', {
@@ -286,26 +323,49 @@ process.on('unhandledRejection', (reason, promise) => {
     });
 });
 // Log process signals for debugging
-process.on('SIGTERM', () => {
-    logger.info('Received SIGTERM signal');
-});
-process.on('SIGINT', () => {
-    logger.info('Received SIGINT signal');
-});
+process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+process.on('SIGINT', () => gracefulShutdown('SIGINT'));
 process.on('exit', (code) => {
     logger.info(`Process exiting with code: ${code}`);
 });
 // Periodic health check logging
-setInterval(() => {
+const healthCheckTimer = setInterval(() => {
     const memUsage = process.memoryUsage();
     logger.debug(`Health check - Memory: ${Math.round(memUsage.heapUsed / 1024 / 1024)}MB used, ${Math.round(memUsage.heapTotal / 1024 / 1024)}MB total`);
 }, 60000); // Log every minute
+healthCheckTimer.unref?.();
+// 优雅关闭：收到信号后停止接受新请求、清理资源
+let shuttingDown = false;
+function gracefulShutdown(signal) {
+    if (shuttingDown)
+        return;
+    shuttingDown = true;
+    logger.info(`Received ${signal}, shutting down gracefully...`);
+    try {
+        wsServer?.close();
+    }
+    catch (e) { /* ignore */ }
+    try {
+        TerminalService.killAll();
+    }
+    catch (e) { /* ignore */ }
+    try {
+        logger.close();
+    }
+    catch (e) { /* ignore */ }
+    server.close(() => {
+        logger.info('HTTP server closed');
+        process.exit(0);
+    });
+    // 兜底：5 秒后强制退出
+    setTimeout(() => process.exit(1), 5000).unref?.();
+}
 /**
  * Returns the Express app without starting the server.
  * Used by tests to create their own server instance.
  */
 function createApp() {
-    return { app };
+    return { app, broadcastService };
 }
-module.exports = { app, createApp };
+module.exports = { app, createApp, broadcastService };
 //# sourceMappingURL=app.js.map
