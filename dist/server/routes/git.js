@@ -8,11 +8,22 @@ const { AppError } = require('../middleware/errorHandler');
 const { requireFields, validatePagination } = require('../middleware/validation');
 /**
  * Helper to get the current workspace directory
+ * 校验 cwd 必须在活跃工作区内，防止在任意目录执行 git 命令
  */
 function getCwd(req) {
     const cwd = req.query.cwd || req.body.cwd || FileService.getWorkspaceRoot();
     if (!cwd) {
         throw new AppError('VALIDATION_ERROR', '没有可用的工作区目录', 400);
+    }
+    // 校验 cwd 是否在活跃工作区内
+    const workspaceRoot = FileService.getWorkspaceRoot();
+    if (workspaceRoot) {
+        const path = require('path');
+        const normalizedRoot = path.resolve(workspaceRoot).replace(/\\/g, '/');
+        const normalizedCwd = path.resolve(cwd).replace(/\\/g, '/');
+        if (normalizedCwd !== normalizedRoot && !normalizedCwd.startsWith(normalizedRoot + '/')) {
+            throw new AppError('FORBIDDEN', 'Git 操作仅限当前工作区目录', 403);
+        }
     }
     return cwd;
 }

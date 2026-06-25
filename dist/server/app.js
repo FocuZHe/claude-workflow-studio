@@ -97,6 +97,13 @@ app.use(auditMiddleware);
 // （不能挂载到 /api/ 上，否则 req.path 会被剥离前缀导致 shouldSkip 误判）
 app.use(authMiddleware);
 // Static files - 使用 config.staticDir 指向 src/client
+// 先拦截 .ts / .map 源文件，避免通过 HTTP 泄露源码结构
+app.use((req, res, next) => {
+    if (req.path && (req.path.endsWith('.ts') || req.path.endsWith('.map') || req.path.endsWith('.d.ts'))) {
+        return res.status(404).send('Not found');
+    }
+    next();
+});
 app.use(express.static(config.staticDir));
 // xterm.js 静态文件（从 node_modules 提供）
 const nodeModulesDir = path.join(__dirname, '..', '..', 'node_modules');
@@ -180,7 +187,9 @@ app.get('/api/workspace-state', (req, res) => {
     }
 });
 // Health check - CLI版本缓存（避免每次请求阻塞事件循环）
+// 使用 Promise 缓存模式：缓存失效后并发请求共享同一个 Promise，避免重复执行
 let cliVersionCache = null;
+let cliVersionPromise = null;
 const CLI_CACHE_TTL = 5 * 60 * 1000; // 5分钟缓存
 app.get('/api/health', async (req, res) => {
     // 检查SDK配置状态
@@ -198,17 +207,24 @@ app.get('/api/health', async (req, res) => {
         cliAvailable = cliVersionCache.available;
     }
     else {
-        try {
-            const { exec } = require('child_process');
-            const { promisify } = require('util');
-            const execAsync = promisify(exec);
-            await execAsync('claude --version', { timeout: 5000, windowsHide: true });
-            cliAvailable = true;
-            cliVersionCache = { available: true, checkedAt: Date.now() };
+        // 并发请求共享同一个 Promise，避免重复执行 execAsync
+        if (!cliVersionPromise) {
+            cliVersionPromise = (async () => {
+                try {
+                    const { exec } = require('child_process');
+                    const { promisify } = require('util');
+                    const execAsync = promisify(exec);
+                    await execAsync('claude --version', { timeout: 5000, windowsHide: true });
+                    return true;
+                }
+                catch (e) {
+                    return false;
+                }
+            })();
         }
-        catch (e) {
-            cliVersionCache = { available: false, checkedAt: Date.now() };
-        }
+        cliAvailable = await cliVersionPromise;
+        cliVersionCache = { available: cliAvailable, checkedAt: Date.now() };
+        cliVersionPromise = null; // 清除 pending Promise，下次缓存失效时重新创建
     }
     res.json({
         success: true,

@@ -219,7 +219,15 @@ class FileService {
         // Check both the normalized form (D:/foo) and original form
         if (path_1.default.isAbsolute(normalized) || /^[A-Za-z]:/.test(normalized)) {
             const resolved = path_1.default.resolve(inputPath);
-            // Check execution mode isolation — block excluded paths (e.g. WORKFLOWS data dir)
+            // 始终强制工作区边界检查（包括工作流执行模式），防止路径遍历
+            if (workspaceRoot) {
+                const normalizedRoot = path_1.default.resolve(workspaceRoot).replace(/\\/g, '/');
+                const normalizedResolved = resolved.replace(/\\/g, '/');
+                if (normalizedResolved !== normalizedRoot && !normalizedResolved.startsWith(normalizedRoot + '/')) {
+                    throw new AppError('FORBIDDEN', '路径在活跃工作区之外', 403);
+                }
+            }
+            // 工作流执行模式下额外检查排除路径（如 WORKFLOWS 数据目录）
             if (FileService.isWorkflowExecution) {
                 for (const excluded of FileService.excludedPaths) {
                     const normalizedExcluded = path_1.default.resolve(excluded).replace(/\\/g, '/');
@@ -227,14 +235,6 @@ class FileService {
                     if (normalizedResolved === normalizedExcluded || normalizedResolved.startsWith(normalizedExcluded + '/')) {
                         throw new AppError('FORBIDDEN', '工作流执行期间禁止访问此路径', 403);
                     }
-                }
-            }
-            // In normal (non-execution) mode, enforce workspace boundary for absolute paths
-            if (!FileService.isWorkflowExecution && workspaceRoot) {
-                const normalizedRoot = path_1.default.resolve(workspaceRoot).replace(/\\/g, '/');
-                const normalizedResolved = resolved.replace(/\\/g, '/');
-                if (normalizedResolved !== normalizedRoot && !normalizedResolved.startsWith(normalizedRoot + '/')) {
-                    throw new AppError('FORBIDDEN', '路径在活跃工作区之外', 403);
                 }
             }
             return resolved;
@@ -373,21 +373,13 @@ class FileService {
         };
     }
     /**
-     * Create directory. Allows creating outside workspace for new workspace folders.
+     * Create directory. Restricted to active workspace only.
      */
     static createDirectory(relativePath) {
-        // Allow absolute paths outside workspace (needed for creating new workspaces)
-        const normalized = relativePath.replace(/\\/g, '/');
-        let fullPath;
-        if (path_1.default.isAbsolute(normalized) || /^[A-Za-z]:/.test(normalized)) {
-            fullPath = path_1.default.resolve(relativePath);
-        }
-        else {
-            const resolved = FileService.resolvePath(relativePath);
-            if (!resolved) {
-                throw new AppError('VALIDATION_ERROR', '没有活跃工作区', 400);
-            }
-            fullPath = resolved;
+        // 统一通过 resolvePath 校验，确保路径在活跃工作区内
+        const fullPath = FileService.resolvePath(relativePath);
+        if (!fullPath) {
+            throw new AppError('VALIDATION_ERROR', '没有活跃工作区', 400);
         }
         if (fs_1.default.existsSync(fullPath)) {
             throw new AppError('CONFLICT', `Directory '${relativePath}' already exists`, 409);

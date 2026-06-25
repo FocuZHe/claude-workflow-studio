@@ -258,9 +258,12 @@ function safetyHeaders() {
     return (req, res, next) => {
         res.set('X-Content-Type-Options', 'nosniff');
         res.set('X-Frame-Options', 'DENY');
-        res.set('X-XSS-Protection', '1; mode=block');
-        res.set('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
-        res.set('Cache-Control', 'no-store, no-cache, must-revalidate');
+        // CSP：限制资源加载来源，防止 XSS 注入外部脚本
+        res.set('Content-Security-Policy', "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self' ws: wss:; font-src 'self' data:;");
+        // 仅对 API 响应设 no-store；静态资源由 express.static 自行控制缓存
+        if (req.path && req.path.startsWith('/api/')) {
+            res.set('Cache-Control', 'no-store, no-cache, must-revalidate');
+        }
         res.removeHeader('X-Powered-By');
         next();
     };

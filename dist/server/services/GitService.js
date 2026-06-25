@@ -130,7 +130,7 @@ class GitService {
         if (!branch || typeof branch !== 'string') {
             throw new Error('Branch is required');
         }
-        return GitService.runGit(cwd, ['checkout', branch]);
+        return GitService.runGit(cwd, ['checkout', '--', branch]);
     }
     static async createBranch(cwd, name) {
         if (!name || typeof name !== 'string') {

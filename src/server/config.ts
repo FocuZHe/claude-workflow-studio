@@ -5,7 +5,7 @@ const fs = require('fs');
 const PROJECT_ROOT = path.join(__dirname, '../..');
 
 const config: any = {
-  port: parseInt(process.env.PORT!, 10) || 3000,
+  port: parseInt(process.env.PORT || '', 10) || 3000,
   host: process.env.HOST || '127.0.0.1',
 
   // Workspace root for file management

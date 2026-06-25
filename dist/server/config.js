@@ -5,7 +5,7 @@ const fs = require('fs');
 // 项目根目录（从 dist/server 向上两级）
 const PROJECT_ROOT = path.join(__dirname, '../..');
 const config = {
-    port: parseInt(process.env.PORT, 10) || 3000,
+    port: parseInt(process.env.PORT || '', 10) || 3000,
     host: process.env.HOST || '127.0.0.1',
     // Workspace root for file management
     workspaceRoot: process.env.WORKSPACE_ROOT || path.join(PROJECT_ROOT, 'workspace'),
