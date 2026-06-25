@@ -10,7 +10,8 @@ const path = require('path');
 const { atomicWriteSync } = require('../utils/atomicWrite');
 const logger = require('../utils/logger');
 class KnowledgeService {
-    static entries = new Map();
+    // _index 为数组（测试直接赋值清空）
+    static _index = [];
     static _initialized = false;
     static _persistPath = '';
     /**
@@ -30,16 +31,16 @@ class KnowledgeService {
                 return;
             const data = JSON.parse(fs.readFileSync(this._persistPath, 'utf-8'));
             if (Array.isArray(data)) {
-                this.entries.clear();
+                this._index = [];
                 for (const entry of data) {
                     if (entry && entry.id) {
                         // 恢复 Date 对象
                         entry.createdAt = new Date(entry.createdAt);
                         entry.updatedAt = new Date(entry.updatedAt);
-                        this.entries.set(entry.id, entry);
+                        this._index.push(entry);
                     }
                 }
-                logger.info(`Loaded ${this.entries.size} knowledge entries from disk`);
+                logger.info(`Loaded ${this._index.length} knowledge entries from disk`);
             }
         }
         catch (e) {
@@ -57,8 +58,7 @@ class KnowledgeService {
             if (!fs.existsSync(dir)) {
                 fs.mkdirSync(dir, { recursive: true });
             }
-            const data = Array.from(this.entries.values());
-            atomicWriteSync(this._persistPath, JSON.stringify(data, null, 2));
+            atomicWriteSync(this._persistPath, JSON.stringify(this._index, null, 2));
         }
         catch (e) {
             logger.error(`Failed to persist knowledge data: ${e.message}`);
@@ -67,17 +67,18 @@ class KnowledgeService {
     /**
      * 添加知识条目
      */
-    static addEntry(title, content, category, tags = []) {
+    static addEntry(title, content, category, tags = [], source = 'manual') {
         const entry = {
             id: Math.random().toString(36).substring(7),
             title,
             content,
             category,
             tags,
+            source,
             createdAt: new Date(),
             updatedAt: new Date()
         };
-        this.entries.set(entry.id, entry);
+        this._index.push(entry);
         this._persist();
         return entry;
     }
@@ -85,7 +86,7 @@ class KnowledgeService {
      * 更新知识条目
      */
     static updateEntry(entryId, updates) {
-        const entry = this.entries.get(entryId);
+        const entry = this._index.find(e => e.id === entryId);
         if (!entry)
             return null;
         if (updates.title !== undefined)
@@ -96,8 +97,9 @@ class KnowledgeService {
             entry.category = updates.category;
         if (updates.tags !== undefined)
             entry.tags = updates.tags;
+        if (updates.source !== undefined)
+            entry.source = updates.source;
         entry.updatedAt = new Date();
-        this.entries.set(entryId, entry);
         this._persist();
         return entry;
     }
@@ -105,47 +107,54 @@ class KnowledgeService {
      * 删除知识条目
      */
     static deleteEntry(entryId) {
-        const result = this.entries.delete(entryId);
-        if (result)
-            this._persist();
-        return result;
+        const idx = this._index.findIndex(e => e.id === entryId);
+        if (idx === -1)
+            return false;
+        this._index.splice(idx, 1);
+        this._persist();
+        return true;
     }
     /**
      * 获取知识条目
      */
     static getEntry(entryId) {
-        return this.entries.get(entryId);
+        return this._index.find(e => e.id === entryId);
     }
     /**
-     * 搜索知识条目
+     * 搜索知识条目（支持 query/category/tag/page/limit，返回 { items, total }）
      */
     static search(query, options) {
-        let results = Array.from(this.entries.values());
+        let results = this._index.slice();
         if (options?.category) {
             results = results.filter(entry => entry.category === options.category);
         }
+        if (options?.tag) {
+            results = results.filter(entry => Array.isArray(entry.tags) && entry.tags.includes(options.tag));
+        }
         if (query) {
             const q = query.toLowerCase();
-            results = results.filter(entry => entry.title.toLowerCase().includes(q) || entry.content.toLowerCase().includes(q));
+            results = results.filter(entry => (entry.title || '').toLowerCase().includes(q) || (entry.content || '').toLowerCase().includes(q));
         }
         // 按更新时间倒序
         results.sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
-        if (options?.limit) {
-            results = results.slice(0, options.limit);
-        }
-        return { items: results };
+        const total = results.length;
+        const page = options?.page || 1;
+        const limit = options?.limit || 20;
+        const start = (page - 1) * limit;
+        const items = results.slice(start, start + limit);
+        return { items, total };
     }
     /**
      * 获取所有知识条目
      */
     static getAll() {
-        return Array.from(this.entries.values());
+        return this._index.slice();
     }
     /**
      * 清空（用于工作区切换）
      */
     static clear() {
-        this.entries.clear();
+        this._index = [];
     }
     /**
      * 重新加载数据
@@ -153,19 +162,19 @@ class KnowledgeService {
     static reload(entries) {
         if (!Array.isArray(entries))
             return;
-        this.entries.clear();
+        this._index = [];
         for (const entry of entries) {
             if (entry && entry.id) {
-                this.entries.set(entry.id, entry);
+                this._index.push(entry);
             }
         }
     }
     // ── 兼容路由调用的别名方法 ──
     /**
-     * 添加条目（兼容路由调用）
+     * 添加条目（兼容路由调用，从 body 提取字段）
      */
     static add(data) {
-        return this.addEntry(data.title || '', data.content || '', data.category || 'default', Array.isArray(data.tags) ? data.tags : []);
+        return this.addEntry(data.title || '', data.content || '', data.category || 'general', Array.isArray(data.tags) ? data.tags : [], data.source || 'manual');
     }
     /**
      * 更新条目（兼容路由调用）

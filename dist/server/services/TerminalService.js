@@ -8,9 +8,14 @@ exports.TerminalService = void 0;
 const pty = require('node-pty');
 const os = require('os');
 const path = require('path');
+const fs = require('fs');
+const config = require('../config');
 const logger = require('../utils/logger');
+// 终端会话持久化文件
+const TERMINAL_SESSIONS_FILE = path.join(config.data.dir, 'terminal-sessions.json');
 class TerminalService {
-    static sessions = new Map();
+    // 会话 Map（_sessions 为公开字段，供测试清空使用）
+    static _sessions = new Map();
     static broadcastService = null;
     /**
      * 设置广播服务
@@ -66,22 +71,29 @@ class TerminalService {
             });
             const session = {
                 id: ptyProcess.pid.toString(),
+                pid: ptyProcess.pid,
                 name: resolvedCwd || shell,
-                status: 'active',
+                status: 'running',
                 cwd: resolvedCwd,
                 createdAt: new Date(),
                 cols,
                 rows,
                 history: savedData?.history || [],
+                outputBuffer: savedData?.outputBuffer ? [...savedData.outputBuffer] : [],
                 ptyProcess,
             };
-            // 监听 PTY 输出 → 广播到前端
+            // 监听 PTY 输出 → 广播到前端 + 缓存到 outputBuffer（供 getOutput 与持久化）
             ptyProcess.onData((data) => {
                 if (TerminalService.broadcastService) {
                     TerminalService.broadcastService.broadcast('terminal.output', {
                         sessionId: session.id,
                         data,
                     });
+                }
+                // 缓存最近输出（上限 1000 行，防止内存膨胀）
+                session.outputBuffer.push(data);
+                if (session.outputBuffer.length > 1000) {
+                    session.outputBuffer.shift();
                 }
             });
             // 监听 PTY 退出
@@ -96,10 +108,11 @@ class TerminalService {
                 }
                 logger.info(`Terminal ${session.id} exited (code: ${exitCode})`);
             });
-            this.sessions.set(session.id, session);
+            this._sessions.set(session.id, session);
             logger.info(`Terminal created: ${session.id} (shell: ${shell}, cwd: ${resolvedCwd})`);
             return {
                 id: session.id,
+                pid: session.pid,
                 name: session.name,
                 cwd: session.cwd,
                 status: session.status,
@@ -116,16 +129,17 @@ class TerminalService {
      * 获取终端会话
      */
     static getSession(sessionId) {
-        return this.sessions.get(sessionId);
+        return this._sessions.get(sessionId);
     }
     /**
      * 获取所有终端会话
      */
     static getSessions() {
-        return Array.from(this.sessions.values())
-            .filter(s => s.status === 'active')
+        return Array.from(this._sessions.values())
+            .filter(s => s.status === 'running')
             .map(s => ({
             id: s.id,
+            pid: s.pid,
             name: s.name,
             cwd: s.cwd,
             status: s.status,
@@ -137,7 +151,7 @@ class TerminalService {
      * 关闭终端会话
      */
     static killSession(sessionId) {
-        const session = this.sessions.get(sessionId);
+        const session = this._sessions.get(sessionId);
         if (!session)
             return false;
         if (session.ptyProcess) {
@@ -147,15 +161,15 @@ class TerminalService {
             catch (e) { /* ignore */ }
         }
         session.status = 'inactive';
-        this.sessions.delete(sessionId);
+        this._sessions.delete(sessionId);
         return true;
     }
     /**
      * 写入输入到 PTY
      */
     static writeInput(sessionId, data) {
-        const session = this.sessions.get(sessionId);
-        if (!session || session.status !== 'active' || !session.ptyProcess)
+        const session = this._sessions.get(sessionId);
+        if (!session || session.status !== 'running' || !session.ptyProcess)
             return false;
         try {
             session.ptyProcess.write(data);
@@ -170,8 +184,8 @@ class TerminalService {
      * 调整终端大小
      */
     static resizeSession(sessionId, cols, rows) {
-        const session = this.sessions.get(sessionId);
-        if (!session || session.status !== 'active' || !session.ptyProcess)
+        const session = this._sessions.get(sessionId);
+        if (!session || session.status !== 'running' || !session.ptyProcess)
             return false;
         try {
             session.ptyProcess.resize(cols, rows);
@@ -185,22 +199,70 @@ class TerminalService {
         }
     }
     /**
-     * 获取输出（PTY 模式下不需要，输出通过 WebSocket 推送）
+     * 获取输出（返回缓存的最近输出，供 REST API /api/terminal/:id/output 使用）
      */
     static getOutput(sessionId) {
-        return null;
+        const session = this._sessions.get(sessionId);
+        if (!session)
+            return null;
+        return Array.isArray(session.outputBuffer) ? session.outputBuffer.join('') : '';
     }
     /**
-     * 从磁盘加载会话
+     * 保存会话到磁盘（按 cwd 索引，供重启后恢复）
+     */
+    static _saveSessionToDisk(session) {
+        if (!session)
+            return;
+        try {
+            const all = this._loadAllFromDisk();
+            all[session.cwd] = {
+                cwd: session.cwd,
+                outputBuffer: Array.isArray(session.outputBuffer) ? session.outputBuffer.slice(-500) : [],
+                history: Array.isArray(session.history) ? session.history.slice(-200) : [],
+                createdAt: session.createdAt ? new Date(session.createdAt).toISOString() : new Date().toISOString(),
+            };
+            if (!fs.existsSync(config.data.dir))
+                fs.mkdirSync(config.data.dir, { recursive: true });
+            fs.writeFileSync(TERMINAL_SESSIONS_FILE, JSON.stringify(all, null, 2), 'utf-8');
+        }
+        catch (e) {
+            logger.warn(`Failed to save terminal session: ${e.message}`);
+        }
+    }
+    /**
+     * 从磁盘加载指定 cwd 的会话
      */
     static _loadSessionFromDisk(cwd) {
-        return { cwd, history: [] };
+        const all = this._loadAllFromDisk();
+        const saved = all[cwd];
+        if (!saved)
+            return { cwd, history: [], outputBuffer: [] };
+        return {
+            cwd: saved.cwd || cwd,
+            history: Array.isArray(saved.history) ? saved.history : [],
+            outputBuffer: Array.isArray(saved.outputBuffer) ? saved.outputBuffer : [],
+            createdAt: saved.createdAt,
+        };
+    }
+    /**
+     * 读取全部持久化的会话
+     */
+    static _loadAllFromDisk() {
+        try {
+            if (fs.existsSync(TERMINAL_SESSIONS_FILE)) {
+                return JSON.parse(fs.readFileSync(TERMINAL_SESSIONS_FILE, 'utf-8')) || {};
+            }
+        }
+        catch (e) {
+            logger.warn(`Failed to read terminal sessions file: ${e.message}`);
+        }
+        return {};
     }
     /**
      * 关闭所有会话
      */
     static killAll() {
-        for (const [id, session] of this.sessions) {
+        for (const [id, session] of this._sessions) {
             if (session.ptyProcess) {
                 try {
                     session.ptyProcess.kill();
@@ -208,7 +270,7 @@ class TerminalService {
                 catch (e) { /* ignore */ }
             }
         }
-        this.sessions.clear();
+        this._sessions.clear();
     }
 }
 exports.TerminalService = TerminalService;

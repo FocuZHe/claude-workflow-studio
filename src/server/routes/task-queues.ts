@@ -15,6 +15,10 @@ router.post('/',
   ),
   (req: any, res: any, next: any) => {
     try {
+      // items 必须是非空数组
+      if (!Array.isArray(req.body.items) || req.body.items.length === 0) {
+        throw new AppError('VALIDATION_ERROR', 'items must be a non-empty array', 400);
+      }
       const queue = TaskQueueService.create(req.body);
       res.status(201).json({ success: true, data: queue });
     } catch (err) {

@@ -5,7 +5,7 @@
 export interface TerminalSession {
     id: string;
     name: string;
-    status: 'active' | 'inactive';
+    status: 'running' | 'inactive';
     cwd: string;
     createdAt: Date;
     cols: number;
@@ -13,8 +13,8 @@ export interface TerminalSession {
     history: string[];
 }
 export declare class TerminalService {
-    private static sessions;
-    private static broadcastService;
+    static _sessions: Map<string, any>;
+    static broadcastService: any;
     /**
      * 设置广播服务
      */
@@ -48,13 +48,21 @@ export declare class TerminalService {
      */
     static resizeSession(sessionId: string, cols: number, rows: number): boolean;
     /**
-     * 获取输出（PTY 模式下不需要，输出通过 WebSocket 推送）
+     * 获取输出（返回缓存的最近输出，供 REST API /api/terminal/:id/output 使用）
      */
     static getOutput(sessionId: string): string | null;
     /**
-     * 从磁盘加载会话
+     * 保存会话到磁盘（按 cwd 索引，供重启后恢复）
+     */
+    static _saveSessionToDisk(session: any): void;
+    /**
+     * 从磁盘加载指定 cwd 的会话
      */
     static _loadSessionFromDisk(cwd: string): any;
+    /**
+     * 读取全部持久化的会话
+     */
+    private static _loadAllFromDisk;
     /**
      * 关闭所有会话
      */

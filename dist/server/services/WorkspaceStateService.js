@@ -1,15 +1,63 @@
 "use strict";
 /**
  * WorkspaceStateService - 工作区状态服务
- * 管理工作区状态持久化
+ * 管理工作区状态持久化（WORKFLOWS 目录下各 JSON 文件）
+ *
+ * saveState(workspacePath, key, data) —— 按文件 key 异步（debounced）写入
+ *   key 与文件名映射见 STATE_FILE_MAP
+ * loadState(workspacePath) —— 读取所有相关 JSON 并合并为单一 state 对象
  */
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.WorkspaceStateService = void 0;
 const logger = require('../utils/logger');
+/**
+ * state key -> 文件名（位于 WORKFLOWS/ 下）映射
+ */
+const STATE_FILE_MAP = {
+    workflows: 'workflows.json',
+    agents: 'agents.json',
+    tasks: 'tasks.json',
+    skills: 'skills.json',
+    mcpTools: 'mcp-tools.json',
+    mcpToolsAlias: 'mcp-tools.json',
+    executionLog: 'execution-log.json',
+    executionLogAlias: 'execution-log.json',
+    chatSessions: 'chat-sessions.json',
+    'chat-sessions': 'chat-sessions.json',
+    taskQueues: 'task-queues.json',
+    'task-queues': 'task-queues.json',
+    promptTemplates: 'prompt-templates.json',
+    'prompt-templates': 'prompt-templates.json',
+    knowledge: 'knowledge.json',
+    tags: 'tags.json',
+    artifactIndex: 'artifact-index.json',
+    manifest: 'manifest.json'
+};
+/**
+ * 反向映射：文件名（不含路径）-> state key
+ */
+const FILE_TO_KEY = {
+    'workflows.json': 'workflows',
+    'agents.json': 'agents',
+    'tasks.json': 'tasks',
+    'skills.json': 'skills',
+    'mcp-tools.json': 'mcpTools',
+    'execution-log.json': 'executionLog',
+    'chat-sessions.json': 'chatSessions',
+    'task-queues.json': 'taskQueues',
+    'prompt-templates.json': 'promptTemplates',
+    'knowledge.json': 'knowledge',
+    'tags.json': 'tags',
+    'artifact-index.json': 'artifactIndex',
+    'manifest.json': 'manifest'
+};
 class WorkspaceStateService {
     static states = new Map();
+    /** saveState debounce 定时器，key = `${workspacePath}|${stateKey}` */
+    static saveTimers = new Map();
+    static SAVE_DEBOUNCE_MS = 500;
     /**
-     * 确保工作流文件夹存在，并创建所有必要的目录和文件
+     * 确保工作流文件夹存在，并创建所有必要的目录和默认 JSON 文件
      * 按照架构文档要求创建完整的目录结构
      */
     static ensureWorkflowsFolder(workspacePath) {
@@ -32,17 +80,21 @@ class WorkspaceStateService {
                     fs.mkdirSync(fullPath, { recursive: true });
                 }
             }
-            // 创建必要的JSON文件（如果不存在）
+            // 创建必要的 JSON 文件（如果不存在）—— 默认空数组
             const jsonFiles = {
+                'WORKFLOWS/manifest.json': { workspaceId: path.basename(workspacePath), version: '1.0.0', createdAt: new Date().toISOString() },
                 'WORKFLOWS/workflows.json': [],
-                'WORKFLOWS/knowledge.json': [],
-                'WORKFLOWS/tags.json': [],
-                'WORKFLOWS/artifact-index.json': [],
-                'WORKFLOWS/chat-sessions.json': [],
-                'WORKFLOWS/prompt-templates.json': [],
+                'WORKFLOWS/agents.json': [],
+                'WORKFLOWS/tasks.json': [],
                 'WORKFLOWS/skills.json': [],
                 'WORKFLOWS/mcp-tools.json': [],
-                'WORKFLOWS/execution-log.json': []
+                'WORKFLOWS/execution-log.json': [],
+                'WORKFLOWS/chat-sessions.json': [],
+                'WORKFLOWS/task-queues.json': [],
+                'WORKFLOWS/prompt-templates.json': [],
+                'WORKFLOWS/knowledge.json': [],
+                'WORKFLOWS/tags.json': [],
+                'WORKFLOWS/artifact-index.json': []
             };
             for (const [filePath, defaultData] of Object.entries(jsonFiles)) {
                 const fullPath = path.join(workspacePath, filePath);
@@ -62,33 +114,43 @@ class WorkspaceStateService {
         }
     }
     /**
-     * 加载状态
+     * 加载工作区完整状态
+     * 读取 WORKFLOWS/ 下所有相关 JSON 文件并合并为单一 state 对象
      */
     static loadState(workspacePath) {
         const fs = require('fs');
         const path = require('path');
         try {
-            const workflowsPath = path.join(workspacePath, 'WORKFLOWS', 'workflows.json');
-            const manifestPath = path.join(workspacePath, 'WORKFLOWS', 'manifest.json');
-            let workflows = [];
-            let manifest = {};
-            // Load workflows
-            if (fs.existsSync(workflowsPath)) {
-                const data = JSON.parse(fs.readFileSync(workflowsPath, 'utf-8'));
-                workflows = Array.isArray(data) ? data : [];
-            }
-            // Load manifest
-            if (fs.existsSync(manifestPath)) {
-                manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf-8'));
-            }
-            return {
-                workspaceId: manifest.workspaceId || path.basename(workspacePath),
+            const workflowsDir = path.join(workspacePath, 'WORKFLOWS');
+            const state = {
+                workspaceId: path.basename(workspacePath),
                 workspacePath,
-                workflows,
-                manifest,
-                agents: [],
                 updatedAt: new Date()
             };
+            // 读取所有已知文件
+            for (const [filename, stateKey] of Object.entries(FILE_TO_KEY)) {
+                const fullPath = path.join(workflowsDir, filename);
+                if (fs.existsSync(fullPath)) {
+                    try {
+                        const raw = fs.readFileSync(fullPath, 'utf-8');
+                        const parsed = raw ? JSON.parse(raw) : null;
+                        state[stateKey] = parsed;
+                    }
+                    catch (e) {
+                        logger.warn(`loadState: 解析 ${filename} 失败: ${e.message}`);
+                        state[stateKey] = null;
+                    }
+                }
+                else {
+                    // 文件不存在则默认空数组或空对象
+                    state[stateKey] = filename === 'manifest.json' ? {} : [];
+                }
+            }
+            // manifest.workspaceId 优先
+            if (state.manifest && state.manifest.workspaceId) {
+                state.workspaceId = state.manifest.workspaceId;
+            }
+            return state;
         }
         catch (e) {
             logger.warn(`Failed to load workspace state: ${e.message}`);
@@ -96,13 +158,68 @@ class WorkspaceStateService {
         }
     }
     /**
-     * 保存状态
+     * 保存工作区某个状态 key 到对应 JSON 文件（debounced 500ms）
+     * 支持两种调用签名：
+     *   saveState(workspacePath, key, data)  ← 推荐用法，写入磁盘
+     *   saveState(state: WorkspaceState)     ← 兼容旧用法，仅写入内存 states Map
      */
-    static saveState(state) {
-        this.states.set(state.workspaceId, state);
+    static saveState(workspacePathOrState, key, data) {
+        // 兼容旧签名：saveState(state)
+        if (typeof workspacePathOrState !== 'string') {
+            const state = workspacePathOrState;
+            if (state && state.workspaceId) {
+                this.states.set(state.workspaceId, state);
+            }
+            return;
+        }
+        // 新签名：saveState(workspacePath, key, data)
+        const workspacePath = workspacePathOrState;
+        if (!workspacePath || !key) {
+            logger.warn('saveState: 缺少必要参数 workspacePath 或 key');
+            return;
+        }
+        const filename = STATE_FILE_MAP[key];
+        if (!filename) {
+            logger.warn(`saveState: 未知 state key '${key}'`);
+            return;
+        }
+        const fs = require('fs');
+        const path = require('path');
+        const fullPath = path.join(workspacePath, 'WORKFLOWS', filename);
+        const timerKey = `${workspacePath}|${key}`;
+        // 取消已存在的定时器（debounce）
+        const existingTimer = this.saveTimers.get(timerKey);
+        if (existingTimer) {
+            clearTimeout(existingTimer);
+        }
+        // 设置新的定时器
+        const timer = setTimeout(() => {
+            this.saveTimers.delete(timerKey);
+            try {
+                // 确保目录存在
+                const dir = path.dirname(fullPath);
+                if (!fs.existsSync(dir)) {
+                    fs.mkdirSync(dir, { recursive: true });
+                }
+                fs.writeFileSync(fullPath, JSON.stringify(data, null, 2), 'utf-8');
+            }
+            catch (e) {
+                logger.error(`saveState: 写入 ${filename} 失败: ${e.message}`);
+            }
+        }, this.SAVE_DEBOUNCE_MS);
+        this.saveTimers.set(timerKey, timer);
     }
     /**
-     * 获取状态
+     * 强制 flush 所有 pending 的 saveState（用于测试或关闭时）
+     */
+    static flushPendingSaves() {
+        for (const [, timer] of this.saveTimers) {
+            clearTimeout(timer);
+        }
+        this.saveTimers.clear();
+    }
+    /**
+     * 获取内存中的 state（与磁盘 loadState 不同）
      */
     static getState(workspaceId) {
         return this.states.get(workspaceId);
@@ -114,7 +231,7 @@ class WorkspaceStateService {
         return Array.from(this.states.values());
     }
     /**
-     * 更新历史记录
+     * 更新历史记录（内存）
      */
     static updateHistory(workspacePath) {
         const fs = require('fs');

@@ -8,11 +8,12 @@ export interface KnowledgeEntry {
     content: string;
     category: string;
     tags: string[];
+    source: string;
     createdAt: Date;
     updatedAt: Date;
 }
 export declare class KnowledgeService {
-    private static entries;
+    static _index: KnowledgeEntry[];
     private static _initialized;
     private static _persistPath;
     /**
@@ -30,7 +31,7 @@ export declare class KnowledgeService {
     /**
      * 添加知识条目
      */
-    static addEntry(title: string, content: string, category: string, tags?: string[]): KnowledgeEntry;
+    static addEntry(title: string, content: string, category: string, tags?: string[], source?: string): KnowledgeEntry;
     /**
      * 更新知识条目
      */
@@ -44,13 +45,16 @@ export declare class KnowledgeService {
      */
     static getEntry(entryId: string): KnowledgeEntry | undefined;
     /**
-     * 搜索知识条目
+     * 搜索知识条目（支持 query/category/tag/page/limit，返回 { items, total }）
      */
     static search(query: string, options?: {
         category?: string;
+        tag?: string;
+        page?: number;
         limit?: number;
     }): {
         items: KnowledgeEntry[];
+        total: number;
     };
     /**
      * 获取所有知识条目
@@ -65,7 +69,7 @@ export declare class KnowledgeService {
      */
     static reload(entries: KnowledgeEntry[]): void;
     /**
-     * 添加条目（兼容路由调用）
+     * 添加条目（兼容路由调用，从 body 提取字段）
      */
     static add(data: any): KnowledgeEntry;
     /**

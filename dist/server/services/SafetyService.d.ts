@@ -36,13 +36,16 @@ export declare class SafetyService {
      */
     static getRule(ruleId: string): SafetyRule | undefined;
     /**
-     * 添加规则
+     * 添加规则（生成 id 并返回完整规则对象）
      */
-    static addRule(rule: SafetyRule): void;
+    static addRule(rule: Partial<SafetyRule> & {
+        name: string;
+        type: string;
+    }): SafetyRule;
     /**
-     * 更新规则
+     * 更新规则（返回更新后的规则对象，未找到返回 undefined）
      */
-    static updateRule(ruleId: string, updates: Partial<SafetyRule>): boolean;
+    static updateRule(ruleId: string, updates: Partial<SafetyRule>): SafetyRule | undefined;
     /**
      * 删除规则
      */

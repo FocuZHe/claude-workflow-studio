@@ -70,7 +70,7 @@ class TaskQueueModel {
             description: data.description || '',
             workflowId: data.workflowId,
             workspaceId: data.workspaceId !== undefined ? data.workspaceId : null,
-            status: 'idle',
+            status: 'pending',
             items,
             currentItemIndex: 0,
             autoStopOnError: data.autoStopOnError !== undefined ? data.autoStopOnError : true,

@@ -9,16 +9,16 @@ export interface Tag {
     createdAt: Date;
 }
 export declare class TagService {
-    private static tags;
+    static _tags: Tag[];
     private static workspaceRoot;
     /**
      * 初始化
      */
     static init(workspaceRoot: string): void;
     /**
-     * 创建标签
+     * 创建标签（重名返回 null，由路由判断 CONFLICT）
      */
-    static createTag(name: string, color: string): Tag;
+    static createTag(name: string, color: string): Tag | null;
     /**
      * 获取标签
      */
@@ -31,5 +31,9 @@ export declare class TagService {
      * 删除标签
      */
     static deleteTag(tagId: string): boolean;
+    static create(name: string, color: string): Tag | null;
+    static list(): Tag[];
+    static delete(tagId: string): boolean;
+    static clear(): void;
 }
 //# sourceMappingURL=TagService.d.ts.map

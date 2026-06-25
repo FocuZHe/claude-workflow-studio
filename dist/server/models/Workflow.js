@@ -338,15 +338,28 @@ class WorkflowModel {
         this._persistPending = false;
         const allWorkflows = Array.from(workflows.values());
         try {
-            const FileService = require('../services/FileService');
-            const WorkspaceManager = require('../services/WorkspaceManager');
-            const currentPath = FileService.runtimeWorkspaceRoot;
-            const currentWs = WorkspaceManager.findByPath(currentPath);
-            if (!currentWs)
-                return;
-            // 只持久化当前工作区的工作流，避免覆盖其他工作区的文件
-            const wsWorkflows = allWorkflows.filter((wf) => wf.workspaceId === currentWs.id);
-            const wfPath = path.join(currentWs.path, 'WORKFLOWS', 'workflows.json');
+            // 优先写到当前激活的 workspace 子目录；若无 workspace 则回退到 DATA_DIR 根目录
+            let wfPath = null;
+            let wsWorkflows = allWorkflows;
+            try {
+                const FileService = require('../services/FileService');
+                const WorkspaceManager = require('../services/WorkspaceManager');
+                const currentPath = FileService.runtimeWorkspaceRoot;
+                const currentWs = currentPath ? WorkspaceManager.findByPath(currentPath) : null;
+                if (currentWs) {
+                    wsWorkflows = allWorkflows.filter((wf) => wf.workspaceId === currentWs.id);
+                    wfPath = path.join(currentWs.path, 'WORKFLOWS', 'workflows.json');
+                }
+            }
+            catch (e) {
+                // ignore — 回退到 DATA_DIR
+            }
+            if (!wfPath) {
+                wfPath = path.join(config.data.dir, config.data.workflowsFile || 'workflows.json');
+            }
+            const dir = path.dirname(wfPath);
+            if (!fs.existsSync(dir))
+                fs.mkdirSync(dir, { recursive: true });
             await atomicWriteAsync(wfPath, JSON.stringify(wsWorkflows, null, 2));
         }
         catch (e) {
@@ -357,15 +370,28 @@ class WorkflowModel {
         this._persistPending = false;
         const allWorkflows = Array.from(workflows.values());
         try {
-            const FileService = require('../services/FileService');
-            const WorkspaceManager = require('../services/WorkspaceManager');
-            const currentPath = FileService.runtimeWorkspaceRoot;
-            const currentWs = WorkspaceManager.findByPath(currentPath);
-            if (!currentWs)
-                return;
-            // 只持久化当前工作区的工作流，避免覆盖其他工作区的文件
-            const wsWorkflows = allWorkflows.filter((wf) => wf.workspaceId === currentWs.id);
-            const wfPath = path.join(currentWs.path, 'WORKFLOWS', 'workflows.json');
+            // 优先写到当前激活的 workspace 子目录；若无 workspace 则回退到 DATA_DIR 根目录
+            let wfPath = null;
+            let wsWorkflows = allWorkflows;
+            try {
+                const FileService = require('../services/FileService');
+                const WorkspaceManager = require('../services/WorkspaceManager');
+                const currentPath = FileService.runtimeWorkspaceRoot;
+                const currentWs = currentPath ? WorkspaceManager.findByPath(currentPath) : null;
+                if (currentWs) {
+                    wsWorkflows = allWorkflows.filter((wf) => wf.workspaceId === currentWs.id);
+                    wfPath = path.join(currentWs.path, 'WORKFLOWS', 'workflows.json');
+                }
+            }
+            catch (e) {
+                // ignore — 回退到 DATA_DIR
+            }
+            if (!wfPath) {
+                wfPath = path.join(config.data.dir, config.data.workflowsFile || 'workflows.json');
+            }
+            const dir = path.dirname(wfPath);
+            if (!fs.existsSync(dir))
+                fs.mkdirSync(dir, { recursive: true });
             atomicWriteSync(wfPath, JSON.stringify(wsWorkflows, null, 2));
         }
         catch (e) {

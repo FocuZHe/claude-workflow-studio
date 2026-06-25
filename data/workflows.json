@@ -1,0 +1,21 @@
+[
+  {
+    "id": "50bf2d90-509f-4ea3-8349-7d0bf526c5d9",
+    "name": "Batch WF",
+    "description": "",
+    "status": "draft",
+    "folderPath": null,
+    "workspaceId": "ws_1782414606250_i2g2tl9aa",
+    "nodes": [],
+    "edges": [],
+    "executionLog": [],
+    "context": {},
+    "memoryEnabled": false,
+    "memorySource": null,
+    "knowledgeSource": null,
+    "createdAt": "2026-06-25T19:56:27.288Z",
+    "updatedAt": "2026-06-25T19:56:27.288Z",
+    "executionStatus": "idle",
+    "currentRunId": null
+  }
+]

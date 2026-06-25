@@ -35,21 +35,29 @@ class SafetyService {
         return this.rules.find(rule => rule.id === ruleId);
     }
     /**
-     * 添加规则
+     * 添加规则（生成 id 并返回完整规则对象）
      */
     static addRule(rule) {
-        this.rules.push(rule);
+        const id = rule.id || `rule-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`;
+        const fullRule = {
+            id,
+            name: rule.name,
+            type: rule.type,
+            enabled: rule.enabled !== undefined ? rule.enabled : true,
+            config: rule.config || {}
+        };
+        this.rules.push(fullRule);
+        return fullRule;
     }
     /**
-     * 更新规则
+     * 更新规则（返回更新后的规则对象，未找到返回 undefined）
      */
     static updateRule(ruleId, updates) {
         const index = this.rules.findIndex(rule => rule.id === ruleId);
-        if (index !== -1) {
-            this.rules[index] = { ...this.rules[index], ...updates };
-            return true;
-        }
-        return false;
+        if (index === -1)
+            return undefined;
+        this.rules[index] = { ...this.rules[index], ...updates, id: ruleId };
+        return this.rules[index];
     }
     /**
      * 删除规则

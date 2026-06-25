@@ -12,8 +12,8 @@ describe('MemoryService', () => {
   before(() => {
     // Create temp directory
     fs.mkdirSync(testDir, { recursive: true });
-    // Clear module cache to get fresh instance
-    delete require.cache[require.resolve('../../src/server/services/MemoryService')];
+    // Clear module cache to get fresh instance (用 dist 路径，src 是 .ts 无法 resolve)
+    try { delete require.cache[require.resolve('../../dist/server/services/MemoryService')]; } catch (_) {}
     MemoryService = require('../../dist/server/services/MemoryService');
     MemoryService.init(testDir);
   });

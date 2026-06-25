@@ -1,6 +1,7 @@
 /**
  * TaskQueueService - 任务队列服务
  * 管理异步任务队列，支持顺序执行、暂停/恢复、错误处理
+ * 存储委托给 TaskQueueModel（单一数据源，避免与 Model 状态不同步）
  */
 export interface Task {
     id: string;
@@ -17,7 +18,7 @@ export interface TaskQueue {
     name: string;
     description?: string;
     workflowId: string;
-    status: 'idle' | 'running' | 'paused' | 'completed' | 'failed' | 'cancelled';
+    status: 'pending' | 'running' | 'paused' | 'completed' | 'failed' | 'cancelled';
     items: any[];
     currentItemIndex: number;
     autoStopOnError: boolean;
@@ -26,13 +27,18 @@ export interface TaskQueue {
 }
 export declare class TaskQueueService {
     private static tasks;
-    private static queues;
     private static _broadcastService;
     private static _runningQueues;
     /**
      * 初始化广播服务
      */
     static init(broadcastService: any): void;
+    /**
+     * 重置卡住的任务（启动时恢复）
+     * running 任务重置为 pending；running/paused 队列重置为 failed（启动前未完成的视为失败）
+     *   注：running→pending / paused→pending 在状态机中非法，故重置为 failed
+     */
+    static resetStuckQueues(): void;
     /**
      * 广播队列状态变化
      */
@@ -54,15 +60,11 @@ export declare class TaskQueueService {
      */
     static getAllTasks(): Task[];
     /**
-     * 重置卡住的任务
+     * 创建任务队列（委托 TaskQueueModel）
      */
-    static resetStuckQueues(): void;
+    static create(data: any): any;
     /**
-     * 创建任务队列
-     */
-    static create(data: any): TaskQueue;
-    /**
-     * 列出任务队列
+     * 列出任务队列（委托 TaskQueueModel）
      */
     static list(params: {
         status?: string;
@@ -70,42 +72,41 @@ export declare class TaskQueueService {
         page?: string;
         limit?: string;
     }): {
-        items: TaskQueue[];
+        items: any[];
         total: number;
         page: number;
         limit: number;
     };
     /**
-     * 获取单个任务队列
+     * 获取单个任务队列（委托 TaskQueueModel，null 抛 404）
      */
-    static getById(id: string): TaskQueue;
+    static getById(id: string): any;
     /**
-     * 更新任务队列
+     * 更新任务队列元数据（委托 TaskQueueModel）
      */
-    static update(id: string, data: any): TaskQueue;
+    static update(id: string, data: any): any;
     /**
-     * 删除任务队列
+     * 删除任务队列（running 队列抛 409）
      */
     static delete(id: string): void;
     /**
      * 开始执行队列
      */
-    static start(id: string): Promise<TaskQueue>;
+    static start(id: string): Promise<any>;
     /**
      * 暂停队列
      */
-    static pause(id: string): TaskQueue;
+    static pause(id: string): any;
     /**
      * 恢复队列
      */
-    static resume(id: string): Promise<TaskQueue>;
+    static resume(id: string): Promise<any>;
     /**
      * 取消队列
      */
-    static cancel(id: string): TaskQueue;
+    static cancel(id: string): any;
     /**
      * 执行队列（内部方法）
-     * 通过 TaskService 创建任务，任务完成后通过回调继续执行下一个
      */
     private static _executeQueue;
     /**
@@ -124,6 +125,14 @@ export declare class TaskQueueService {
      * 任务失败回调（由 TaskService 调用）
      */
     static _onTaskFail(queueId: string, itemId: string, taskId: string, error: string): void;
+    /**
+     * 通知人工干预（暂停队列，将当前 item 标记为 waiting_human）
+     */
+    static notifyHumanIntervention(queueId: string, runId: string, nodeId: string, type: string): void;
+    /**
+     * 通知人工响应（恢复队列，将 waiting_human 的 item 转回 running）
+     */
+    static notifyHumanResponse(queueId: string, workflowId: string, nodeId: string): void;
     /**
      * 继续执行队列（内部方法）
      */

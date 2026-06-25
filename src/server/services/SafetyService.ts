@@ -56,22 +56,29 @@ export class SafetyService {
   }
 
   /**
-   * 添加规则
+   * 添加规则（生成 id 并返回完整规则对象）
    */
-  static addRule(rule: SafetyRule): void {
-    this.rules.push(rule);
+  static addRule(rule: Partial<SafetyRule> & { name: string; type: string }): SafetyRule {
+    const id = rule.id || `rule-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`;
+    const fullRule: SafetyRule = {
+      id,
+      name: rule.name,
+      type: rule.type,
+      enabled: rule.enabled !== undefined ? rule.enabled : true,
+      config: rule.config || {}
+    };
+    this.rules.push(fullRule);
+    return fullRule;
   }
 
   /**
-   * 更新规则
+   * 更新规则（返回更新后的规则对象，未找到返回 undefined）
    */
-  static updateRule(ruleId: string, updates: Partial<SafetyRule>): boolean {
+  static updateRule(ruleId: string, updates: Partial<SafetyRule>): SafetyRule | undefined {
     const index = this.rules.findIndex(rule => rule.id === ruleId);
-    if (index !== -1) {
-      this.rules[index] = { ...this.rules[index], ...updates };
-      return true;
-    }
-    return false;
+    if (index === -1) return undefined;
+    this.rules[index] = { ...this.rules[index], ...updates, id: ruleId };
+    return this.rules[index];
   }
 
   /**

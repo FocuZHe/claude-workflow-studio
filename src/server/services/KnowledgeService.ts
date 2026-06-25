@@ -14,12 +14,14 @@ export interface KnowledgeEntry {
   content: string;
   category: string;
   tags: string[];
+  source: string;
   createdAt: Date;
   updatedAt: Date;
 }
 
 export class KnowledgeService {
-  private static entries: Map<string, KnowledgeEntry> = new Map();
+  // _index 为数组（测试直接赋值清空）
+  static _index: KnowledgeEntry[] = [];
   private static _initialized: boolean = false;
   private static _persistPath: string = '';
 
@@ -40,16 +42,16 @@ export class KnowledgeService {
       if (!this._persistPath || !fs.existsSync(this._persistPath)) return;
       const data = JSON.parse(fs.readFileSync(this._persistPath, 'utf-8'));
       if (Array.isArray(data)) {
-        this.entries.clear();
+        this._index = [];
         for (const entry of data) {
           if (entry && entry.id) {
             // 恢复 Date 对象
             entry.createdAt = new Date(entry.createdAt);
             entry.updatedAt = new Date(entry.updatedAt);
-            this.entries.set(entry.id, entry);
+            this._index.push(entry);
           }
         }
-        logger.info(`Loaded ${this.entries.size} knowledge entries from disk`);
+        logger.info(`Loaded ${this._index.length} knowledge entries from disk`);
       }
     } catch (e: any) {
       logger.warn(`Failed to load knowledge data: ${e.message}`);
@@ -66,8 +68,7 @@ export class KnowledgeService {
       if (!fs.existsSync(dir)) {
         fs.mkdirSync(dir, { recursive: true });
       }
-      const data = Array.from(this.entries.values());
-      atomicWriteSync(this._persistPath, JSON.stringify(data, null, 2));
+      atomicWriteSync(this._persistPath, JSON.stringify(this._index, null, 2));
     } catch (e: any) {
       logger.error(`Failed to persist knowledge data: ${e.message}`);
     }
@@ -76,18 +77,19 @@ export class KnowledgeService {
   /**
    * 添加知识条目
    */
-  static addEntry(title: string, content: string, category: string, tags: string[] = []): KnowledgeEntry {
+  static addEntry(title: string, content: string, category: string, tags: string[] = [], source: string = 'manual'): KnowledgeEntry {
     const entry: KnowledgeEntry = {
       id: Math.random().toString(36).substring(7),
       title,
       content,
       category,
       tags,
+      source,
       createdAt: new Date(),
       updatedAt: new Date()
     };
 
-    this.entries.set(entry.id, entry);
+    this._index.push(entry);
     this._persist();
     return entry;
   }
@@ -96,16 +98,16 @@ export class KnowledgeService {
    * 更新知识条目
    */
   static updateEntry(entryId: string, updates: Partial<KnowledgeEntry>): KnowledgeEntry | null {
-    const entry = this.entries.get(entryId);
+    const entry = this._index.find(e => e.id === entryId);
     if (!entry) return null;
 
     if (updates.title !== undefined) entry.title = updates.title;
     if (updates.content !== undefined) entry.content = updates.content;
     if (updates.category !== undefined) entry.category = updates.category;
     if (updates.tags !== undefined) entry.tags = updates.tags;
+    if (updates.source !== undefined) entry.source = updates.source;
     entry.updatedAt = new Date();
 
-    this.entries.set(entryId, entry);
     this._persist();
     return entry;
   }
@@ -114,57 +116,65 @@ export class KnowledgeService {
    * 删除知识条目
    */
   static deleteEntry(entryId: string): boolean {
-    const result = this.entries.delete(entryId);
-    if (result) this._persist();
-    return result;
+    const idx = this._index.findIndex(e => e.id === entryId);
+    if (idx === -1) return false;
+    this._index.splice(idx, 1);
+    this._persist();
+    return true;
   }
 
   /**
    * 获取知识条目
    */
   static getEntry(entryId: string): KnowledgeEntry | undefined {
-    return this.entries.get(entryId);
+    return this._index.find(e => e.id === entryId);
   }
 
   /**
-   * 搜索知识条目
+   * 搜索知识条目（支持 query/category/tag/page/limit，返回 { items, total }）
    */
-  static search(query: string, options?: { category?: string; limit?: number }): { items: KnowledgeEntry[] } {
-    let results = Array.from(this.entries.values());
+  static search(query: string, options?: { category?: string; tag?: string; page?: number; limit?: number }): { items: KnowledgeEntry[]; total: number } {
+    let results = this._index.slice();
 
     if (options?.category) {
       results = results.filter(entry => entry.category === options.category);
     }
 
+    if (options?.tag) {
+      results = results.filter(entry => Array.isArray(entry.tags) && entry.tags.includes(options.tag!));
+    }
+
     if (query) {
       const q = query.toLowerCase();
       results = results.filter(entry =>
-        entry.title.toLowerCase().includes(q) || entry.content.toLowerCase().includes(q)
+        (entry.title || '').toLowerCase().includes(q) || (entry.content || '').toLowerCase().includes(q)
       );
     }
 
     // 按更新时间倒序
     results.sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
 
-    if (options?.limit) {
-      results = results.slice(0, options.limit);
-    }
+    const total = results.length;
+    const page = options?.page || 1;
+    const limit = options?.limit || 20;
+    const start = (page - 1) * limit;
+    const items = results.slice(start, start + limit);
 
-    return { items: results };
+    return { items, total };
   }
 
   /**
    * 获取所有知识条目
    */
   static getAll(): KnowledgeEntry[] {
-    return Array.from(this.entries.values());
+    return this._index.slice();
   }
 
   /**
    * 清空（用于工作区切换）
    */
   static clear(): void {
-    this.entries.clear();
+    this._index = [];
   }
 
   /**
@@ -172,10 +182,10 @@ export class KnowledgeService {
    */
   static reload(entries: KnowledgeEntry[]): void {
     if (!Array.isArray(entries)) return;
-    this.entries.clear();
+    this._index = [];
     for (const entry of entries) {
       if (entry && entry.id) {
-        this.entries.set(entry.id, entry);
+        this._index.push(entry);
       }
     }
   }
@@ -183,14 +193,15 @@ export class KnowledgeService {
   // ── 兼容路由调用的别名方法 ──
 
   /**
-   * 添加条目（兼容路由调用）
+   * 添加条目（兼容路由调用，从 body 提取字段）
    */
   static add(data: any): KnowledgeEntry {
     return this.addEntry(
       data.title || '',
       data.content || '',
-      data.category || 'default',
-      Array.isArray(data.tags) ? data.tags : []
+      data.category || 'general',
+      Array.isArray(data.tags) ? data.tags : [],
+      data.source || 'manual'
     );
   }
 

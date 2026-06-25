@@ -1,8 +1,8 @@
 const { describe, it } = require('node:test');
 const assert = require('node:assert');
 
-// Clear module cache
-delete require.cache[require.resolve('../../src/server/services/WorkflowInteropService')];
+// Clear module cache（用 dist 路径，src 是 .ts 无法 resolve）
+try { delete require.cache[require.resolve('../../dist/server/services/WorkflowInteropService')]; } catch (_) {}
 const WorkflowInteropService = require('../../dist/server/services/WorkflowInteropService');
 
 describe('WorkflowInteropService', () => {

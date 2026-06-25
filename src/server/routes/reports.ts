@@ -35,21 +35,20 @@ router.post('/generate', (req: any, res: any, next: any) => {
 router.get('/:workflowId/:runId', (req: any, res: any, next: any) => {
   try {
     const { workflowId, runId } = req.params;
-    const content = ReportService.getReport(workflowId, runId);
-    if (!content) throw new AppError('NOT_FOUND', '报告未找到', 404);
-    res.json({ success: true, data: { content, workflowId, runId } });
+    const report = ReportService.getReport(workflowId, runId);
+    if (!report) throw new AppError('NOT_FOUND', '报告未找到', 404);
+    res.json({ success: true, data: { content: report.content, workflowId, runId } });
   } catch (err) { next(err); }
 });
 
 router.get('/:workflowId/:runId/download', (req: any, res: any, next: any) => {
   try {
     const { workflowId, runId } = req.params;
-    const content = ReportService.getReport(workflowId, runId);
-    if (!content) throw new AppError('NOT_FOUND', '报告未找到', 404);
-    const meta = ReportService.getReportMeta(workflowId, runId);
+    const report = ReportService.getReport(workflowId, runId);
+    if (!report) throw new AppError('NOT_FOUND', '报告未找到', 404);
     res.setHeader('Content-Type', 'text/markdown; charset=utf-8');
     res.setHeader('Content-Disposition', `attachment; filename="report-${workflowId}-${runId}.md"`);
-    res.send(content);
+    res.send(report.content);
   } catch (err) { next(err); }
 });
 

@@ -236,6 +236,22 @@ export declare class WorkflowService {
      */
     static _executeWithOrchestrator(workflowId: string, runId: string, input: any, workflow: WorkflowData): Promise<void>;
     /**
+     * Mock 执行路径：使用注入的 Mock claudeService/sdkService 执行工作流
+     *
+     * 用于测试环境，避免 WorkflowOrchestrator 构造函数硬依赖 ApiKeyService.getClientConfig()
+     * 导致同步抛错。同时修复成功路径不标记 start 节点为 completed 的 bug。
+     *
+     * 执行流程：
+     * 1. 拓扑排序所有节点（Kahn 算法，支持并行分支和多个入度为 0 的节点）
+     * 2. start 节点：output = input
+     * 3. agent 节点：调用 Mock claudeService.execute() 获取 output，失败时走 fallback
+     * 4. end 节点：聚合所有上游节点的 output
+     * 5. 标记所有节点（包括 start）为 completed
+     * 6. 更新 executionLog 状态为 completed
+     * 7. 标记工作流 executionStatus 为 completed
+     */
+    static _executeWithMock(workflowId: string, runId: string, input: any, workflow: WorkflowData): Promise<void>;
+    /**
      * 清理子 Agent 启动的服务器进程（端口 8000-8999）
      * 防止端口占用堆积
      *
