@@ -597,8 +597,14 @@ router.post('/create-from-text', async (req, res, next) => {
             workflowData = parseDiagram(description);
         }
         else {
-            // Natural language — use Claude Haiku to generate structured JSON
-            workflowData = await generateWorkflowByAI(description);
+            // Natural language — 优先使用 AI 生成，失败时 fallback 到本地解析器
+            try {
+                workflowData = await generateWorkflowByAI(description);
+            }
+            catch (aiErr) {
+                logger.warn('AI workflow generation failed, falling back to local parser', { error: aiErr.message });
+                workflowData = parseNaturalLanguageToLocalWorkflow(description);
+            }
         }
         // Apply isGlobal and workspaceId
         workflowData.isGlobal = !!isGlobal;
@@ -847,6 +853,78 @@ async function generateWorkflowByAI(description) {
         logger.error('AI workflow generation failed', { error: err.message });
         throw new AppError('AI_ERROR', `AI 工作流生成失败: ${err.message}`, 500);
     }
+}
+/**
+ * 本地自然语言解析器（AI 不可用时的 fallback）
+ *
+ * 基于逗号/顿号/换行切分的确定性解析：
+ * - 描述 `搜集资料，分析数据，生成报告` → start + 3 agent + end（5 节点，4 边）
+ * - 描述 `搜索信息` → start + 1 agent + end（3 节点，2 边）
+ *
+ * 节点 id 从 n1 开始递增：n1(start) → n2..nK(agent) → nK+1(end)
+ * 边连接：n1 → n2 → ... → nK → nK+1（线性流程）
+ */
+function parseNaturalLanguageToLocalWorkflow(description) {
+    // 按中文逗号、中文顿号、英文逗号、换行切分步骤
+    const steps = description
+        .split(/[，,、\n]+/)
+        .map(s => s.trim())
+        .filter(s => s.length > 0);
+    // 如果切分后只有一个步骤，仍创建 start + agent + end 结构
+    const nodeCount = steps.length + 2; // start + N agents + end
+    const nodes = [];
+    const edges = [];
+    // n1: start 节点
+    nodes.push({
+        id: 'n1',
+        label: '开始',
+        type: 'start',
+        position: { x: 80, y: 60 },
+        config: {},
+        defaultPrompt: '',
+        requiresInput: false
+    });
+    // n2..nK: agent 节点（每个步骤一个）
+    steps.forEach((step, idx) => {
+        const nodeId = `n${idx + 2}`;
+        nodes.push({
+            id: nodeId,
+            label: step.substring(0, 10), // 标签不超过 10 字
+            type: 'agent',
+            position: { x: 80, y: 60 + (idx + 1) * 200 },
+            config: {
+                systemPrompt: `执行任务：${step}`,
+                model: 'sonnet'
+            },
+            defaultPrompt: step,
+            requiresInput: false
+        });
+    });
+    // 最后一个节点：end
+    const endNodeId = `n${nodeCount}`;
+    nodes.push({
+        id: endNodeId,
+        label: '结束',
+        type: 'end',
+        position: { x: 80, y: 60 + (steps.length + 1) * 200 },
+        config: {},
+        defaultPrompt: '',
+        requiresInput: false
+    });
+    // 生成线性边：n1 → n2 → ... → nK → end
+    for (let i = 0; i < nodes.length - 1; i++) {
+        edges.push({
+            id: `e${i + 1}`,
+            source: nodes[i].id,
+            target: nodes[i + 1].id
+        });
+    }
+    return {
+        name: description.substring(0, 20), // 名称不超过 20 字
+        description,
+        nodes,
+        edges
+    };
 }
 /**
  * Parse structured diagram format (ASCII art with boxes and arrows)

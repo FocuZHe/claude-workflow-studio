@@ -16,6 +16,7 @@ export interface ClientInfo {
 export declare class BroadcastService extends EventEmitter {
     private wss;
     clients: Map<string, ClientInfo>;
+    private _history;
     /**
      * 设置 WebSocket 服务器
      */
@@ -52,6 +53,19 @@ export declare class BroadcastService extends EventEmitter {
      * 获取连接的客户端数量
      */
     getClientCount(): number;
+    /**
+     * 获取所有连接的客户端信息（供 /api/clients 路由使用）
+     */
+    getClients(): any[];
+    /**
+     * 发送广播消息（供 /api/broadcast 路由使用）
+     * 返回发送的客户端数量
+     */
+    broadcastMessage(message: string, type?: string, data?: any): number;
+    /**
+     * 获取广播历史（供 /api/broadcast/history 路由使用）
+     */
+    getHistory(limit?: number): any[];
     /**
      * 关闭所有连接
      */

@@ -1,20 +1,115 @@
 [
   {
-    "id": "50bf2d90-509f-4ea3-8349-7d0bf526c5d9",
-    "name": "Batch WF",
-    "description": "",
+    "id": "839655b7-6b24-4e1c-ad90-d06c0565ae28",
+    "name": "搜集资料，分析数据",
+    "description": "搜集资料，分析数据",
     "status": "draft",
     "folderPath": null,
-    "workspaceId": "ws_1782414606250_i2g2tl9aa",
-    "nodes": [],
-    "edges": [],
+    "workspaceId": null,
+    "nodes": [
+      {
+        "id": "n1",
+        "label": "开始",
+        "type": "start",
+        "agentId": "",
+        "position": {
+          "x": 80,
+          "y": 60
+        },
+        "config": {},
+        "defaultPrompt": "",
+        "requiresInput": false,
+        "status": "pending",
+        "output": null,
+        "startedAt": null,
+        "completedAt": null,
+        "logs": []
+      },
+      {
+        "id": "n2",
+        "label": "搜集资料",
+        "type": "agent",
+        "agentId": "",
+        "position": {
+          "x": 80,
+          "y": 260
+        },
+        "config": {
+          "systemPrompt": "执行任务：搜集资料",
+          "model": "sonnet"
+        },
+        "defaultPrompt": "搜集资料",
+        "requiresInput": false,
+        "status": "pending",
+        "output": null,
+        "startedAt": null,
+        "completedAt": null,
+        "logs": []
+      },
+      {
+        "id": "n3",
+        "label": "分析数据",
+        "type": "agent",
+        "agentId": "",
+        "position": {
+          "x": 80,
+          "y": 460
+        },
+        "config": {
+          "systemPrompt": "执行任务：分析数据",
+          "model": "sonnet"
+        },
+        "defaultPrompt": "分析数据",
+        "requiresInput": false,
+        "status": "pending",
+        "output": null,
+        "startedAt": null,
+        "completedAt": null,
+        "logs": []
+      },
+      {
+        "id": "n4",
+        "label": "结束",
+        "type": "end",
+        "agentId": "",
+        "position": {
+          "x": 80,
+          "y": 660
+        },
+        "config": {},
+        "defaultPrompt": "",
+        "requiresInput": false,
+        "status": "pending",
+        "output": null,
+        "startedAt": null,
+        "completedAt": null,
+        "logs": []
+      }
+    ],
+    "edges": [
+      {
+        "id": "e1",
+        "source": "n1",
+        "target": "n2"
+      },
+      {
+        "id": "e2",
+        "source": "n2",
+        "target": "n3"
+      },
+      {
+        "id": "e3",
+        "source": "n3",
+        "target": "n4"
+      }
+    ],
     "executionLog": [],
     "context": {},
     "memoryEnabled": false,
     "memorySource": null,
     "knowledgeSource": null,
-    "createdAt": "2026-06-25T19:56:27.288Z",
-    "updatedAt": "2026-06-25T19:56:27.288Z",
+    "createdAt": "2026-06-26T02:22:25.534Z",
+    "updatedAt": "2026-06-26T02:22:25.534Z",
     "executionStatus": "idle",
     "currentRunId": null
   }

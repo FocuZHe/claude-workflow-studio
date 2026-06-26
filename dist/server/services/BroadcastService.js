@@ -10,6 +10,7 @@ const events_1 = require("events");
 class BroadcastService extends events_1.EventEmitter {
     wss = null;
     clients = new Map();
+    _history = [];
     /**
      * 设置 WebSocket 服务器
      */
@@ -121,6 +122,46 @@ class BroadcastService extends events_1.EventEmitter {
      */
     getClientCount() {
         return this.clients.size;
+    }
+    /**
+     * 获取所有连接的客户端信息（供 /api/clients 路由使用）
+     */
+    getClients() {
+        const list = [];
+        this.clients.forEach((client, clientId) => {
+            list.push({
+                id: clientId,
+                metadata: client.metadata || {},
+                lastHeartbeat: client.lastHeartbeat ? new Date(client.lastHeartbeat).toISOString() : null
+            });
+        });
+        return list;
+    }
+    /**
+     * 发送广播消息（供 /api/broadcast 路由使用）
+     * 返回发送的客户端数量
+     */
+    broadcastMessage(message, type = 'info', data) {
+        const payload = {
+            message,
+            type,
+            data: data || null,
+            timestamp: new Date().toISOString()
+        };
+        // 记录到历史
+        this._history.unshift(payload);
+        if (this._history.length > 100) {
+            this._history = this._history.slice(0, 100);
+        }
+        // 广播给所有客户端
+        this.broadcast('broadcast', payload);
+        return this.clients.size;
+    }
+    /**
+     * 获取广播历史（供 /api/broadcast/history 路由使用）
+     */
+    getHistory(limit = 50) {
+        return this._history.slice(0, limit);
     }
     /**
      * 关闭所有连接
